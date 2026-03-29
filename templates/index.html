@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html;charset=utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>APT Detection Dashboard</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" type="text/css" href="static/css/thirdparty.min.css">
+    <link rel="stylesheet" type="text/css" href="static/css/main.css">
+    <link rel="stylesheet" type="text/css" href="static/css/media.css">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/socket.io/4.4.1/socket.io.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.min.js"></script>
+    <script src="static/js/application.js"></script>
+</head>
+<body class="dashboard-body">
+    <div class="dashboard-shell">
+        <header class="hero-panel">
+            <div class="hero-copy">
+                <p class="eyebrow">Real-time Intrusion Monitoring</p>
+                <h1>APT Detection Control Room</h1>
+                <p class="hero-text">
+                    Track live network flows, surface suspicious behavior, and jump into explainable model output without digging through raw logs.
+                </p>
+                <div class="hero-status">
+                    <span class="status-dot"></span>
+                    <span>Socket stream connected to live capture feed</span>
+                </div>
+            </div>
+            <div class="hero-meta">
+                <div class="meta-card">
+                    <span class="meta-label">Mode</span>
+                    <strong>Live Monitoring</strong>
+                </div>
+                <div class="meta-card">
+                    <span class="meta-label">Engine</span>
+                    <strong>RF + AE</strong>
+                </div>
+                <div class="meta-card">
+                    <span class="meta-label">Detail View</span>
+                    <strong>LIME Explainability</strong>
+                </div>
+            </div>
+        </header>
+
+        <section class="stats-grid">
+            <article class="stat-card accent-blue">
+                <span class="stat-label">Recent Flows</span>
+                <strong class="stat-value" id="stat-total">0</strong>
+                <span class="stat-foot">Latest rows currently visible</span>
+            </article>
+            <article class="stat-card accent-red">
+                <span class="stat-label">Elevated Risk</span>
+                <strong class="stat-value" id="stat-high-risk">0</strong>
+                <span class="stat-foot">High or Very High in current window</span>
+            </article>
+            <article class="stat-card accent-green">
+                <span class="stat-label">Benign Flows</span>
+                <strong class="stat-value" id="stat-benign">0</strong>
+                <span class="stat-foot">Predicted as benign in current window</span>
+            </article>
+            <article class="stat-card accent-gold">
+                <span class="stat-label">Unique Sources</span>
+                <strong class="stat-value" id="stat-sources">0</strong>
+                <span class="stat-foot">Distinct source IPs in the chart</span>
+            </article>
+        </section>
+
+        <section class="dashboard-grid">
+            <article class="panel chart-panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="panel-kicker">Traffic Focus</p>
+                        <h2>Most Active Source IPs</h2>
+                    </div>
+                    <p class="panel-note">Live count of observed source addresses</p>
+                </div>
+                <div class="chart-wrap">
+                    <canvas id="myChart"></canvas>
+                </div>
+            </article>
+
+            <article class="panel insights-panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="panel-kicker">Operator Notes</p>
+                        <h2>How to Read This View</h2>
+                    </div>
+                </div>
+                <ul class="insight-list">
+                    <li>Use the top cards to spot risk spikes before scanning the table.</li>
+                    <li>Source and destination columns preserve LAN and country markers from the classifier output.</li>
+                    <li>Open any flow detail to inspect LIME explanation and reconstruction error ranking.</li>
+                </ul>
+            </article>
+        </section>
+
+        <section class="panel table-panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-kicker">Recent Events</p>
+                    <h2>Captured Flow Timeline</h2>
+                </div>
+                <p class="panel-note">Newest flows appear at the top</p>
+            </div>
+
+            <div class="table-wrap" id="log">
+                <table class="flow-table" id="details">
+                    <thead>
+                        <tr>
+                            <th>Flow ID</th>
+                            <th>Source</th>
+                            <th>Src Port</th>
+                            <th>Destination</th>
+                            <th>Dst Port</th>
+                            <th>Protocol</th>
+                            <th>Started</th>
+                            <th>Last Seen</th>
+                            <th>App</th>
+                            <th>PID</th>
+                            <th>Prediction</th>
+                            <th>Probability</th>
+                            <th>Risk</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td colspan="14" class="empty-state">
+                                Waiting for live flow data. Start capture traffic and this dashboard will populate automatically.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </div>
+
+    <noscript>
+        <div id="noscript">
+            Javascript is disabled in your browser. You must have Javascript enabled to utilize the functionality of this page.
+        </div>
+    </noscript>
+</body>
+</html>

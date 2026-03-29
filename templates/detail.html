@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="Content-Type" content="text/html;charset=utf8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
+    <title>Flow Detail</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+
+    <link rel="stylesheet" type="text/css" href="static/css/thirdparty.min.css">
+    <link rel="stylesheet" type="text/css" href="static/css/main.css">
+    <link rel="stylesheet" type="text/css" href="static/css/media.css">
+</head>
+<body class="dashboard-body detail-body">
+    <div class="dashboard-shell detail-shell">
+        <header class="hero-panel detail-hero">
+            <div class="hero-copy">
+                <p class="eyebrow">Explainable Threat Analysis</p>
+                <h1>Flow Investigation</h1>
+                <p class="hero-text">
+                    Review model confidence, anomaly contribution, and full feature context for the selected network flow.
+                </p>
+            </div>
+            <div class="risk-card">
+                <span class="meta-label">Current Risk</span>
+                <div class="risk-badge-block">
+                    {{ risk|safe }}
+                </div>
+                <a class="back-link" href="/">Back to dashboard</a>
+            </div>
+        </header>
+
+        <section class="detail-grid">
+            <article class="panel detail-panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="panel-kicker">Classifier Insight</p>
+                        <h2>LIME Explanation</h2>
+                    </div>
+                    <p class="panel-note">Top features influencing the Random Forest decision</p>
+                </div>
+                <div class="explain-wrap">
+                    {% if exp %}
+                        {{ exp|safe }}
+                    {% else %}
+                        <p class="empty-copy">No explanation was generated for this flow.</p>
+                    {% endif %}
+                </div>
+            </article>
+
+            <article class="panel detail-panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="panel-kicker">Anomaly Context</p>
+                        <h2>Autoencoder Reconstruction Error</h2>
+                    </div>
+                    <p class="panel-note">Largest deviations from learned normal traffic behavior</p>
+                </div>
+                <div class="plot-wrap">
+                    {{ ae_plot|safe }}
+                </div>
+            </article>
+        </section>
+
+        <section class="panel detail-panel">
+            <div class="panel-head">
+                <div>
+                    <p class="panel-kicker">Raw Feature View</p>
+                    <h2>All Features Used for Evaluation</h2>
+                </div>
+                <p class="panel-note">Scrollable table for full packet-flow context</p>
+            </div>
+            <div class="feature-table-wrap">
+                {% for table in tables %}
+                    {{ table|safe }}
+                {% endfor %}
+            </div>
+        </section>
+    </div>
+</body>
+</html>
