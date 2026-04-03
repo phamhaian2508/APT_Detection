@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta http-equiv="Content-Type" content="text/html;charset=utf8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>APT Detection Dashboard</title>
+    <title>Hệ Thống Giám Sát APT Detection</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,52 +24,52 @@
     <div class="dashboard-shell">
         <header class="hero-panel">
             <div class="hero-copy">
-                <p class="eyebrow">Real-time Intrusion Monitoring</p>
-                <h1>APT Detection Control Room</h1>
+                <p class="eyebrow">Giám sát xâm nhập mạng theo thời gian thực</p>
+                <h1>Hệ thống giám sát và phát hiện APT</h1>
                 <p class="hero-text">
-                    Track live network flows, surface suspicious behavior, and jump into explainable model output without digging through raw logs.
+                    Theo dõi liên tục các luồng mạng, phát hiện sớm dấu hiệu bất thường, và hỗ trợ phân tích quyết định của mô hình trên cùng một giao diện tập trung.
                 </p>
                 <div class="hero-status">
                     <span class="status-dot"></span>
-                    <span>Socket stream connected to live capture feed</span>
+                    <span>Hệ thống đã kết nối với nguồn dữ liệu bắt gói tin trực tiếp</span>
                 </div>
             </div>
             <div class="hero-meta">
                 <div class="meta-card">
-                    <span class="meta-label">Mode</span>
-                    <strong>Live Monitoring</strong>
+                    <span class="meta-label">Chế độ</span>
+                    <strong>Giám sát thời gian thực</strong>
                 </div>
                 <div class="meta-card">
-                    <span class="meta-label">Engine</span>
-                    <strong>RF + AE</strong>
+                    <span class="meta-label">Mô hình</span>
+                    <strong>Random Forest + Autoencoder</strong>
                 </div>
                 <div class="meta-card">
-                    <span class="meta-label">Detail View</span>
-                    <strong>LIME Explainability</strong>
+                    <span class="meta-label">Trang chi tiết</span>
+                    <strong>Phân tích và giải thích bằng LIME</strong>
                 </div>
             </div>
         </header>
 
         <section class="stats-grid">
             <article class="stat-card accent-blue">
-                <span class="stat-label">Recent Flows</span>
+                <span class="stat-label">Lưu lượng gần đây</span>
                 <strong class="stat-value" id="stat-total">0</strong>
-                <span class="stat-foot">Latest rows currently visible</span>
+                <span class="stat-foot">Số bản ghi gần nhất đang hiển thị</span>
             </article>
             <article class="stat-card accent-red">
-                <span class="stat-label">Elevated Risk</span>
+                <span class="stat-label">Rủi ro cần lưu ý</span>
                 <strong class="stat-value" id="stat-high-risk">0</strong>
-                <span class="stat-foot">High or Very High in current window</span>
+                <span class="stat-foot">Số bản ghi ở mức Cao hoặc Rất cao</span>
             </article>
             <article class="stat-card accent-green">
-                <span class="stat-label">Benign Flows</span>
+                <span class="stat-label">Lưu lượng hợp lệ</span>
                 <strong class="stat-value" id="stat-benign">0</strong>
-                <span class="stat-foot">Predicted as benign in current window</span>
+                <span class="stat-foot">Số bản ghi được đánh giá là hợp lệ</span>
             </article>
             <article class="stat-card accent-gold">
-                <span class="stat-label">Unique Sources</span>
+                <span class="stat-label">Nguồn quan sát</span>
                 <strong class="stat-value" id="stat-sources">0</strong>
-                <span class="stat-foot">Distinct source IPs in the chart</span>
+                <span class="stat-foot">Số địa chỉ IP nguồn khác nhau</span>
             </article>
         </section>
 
@@ -77,10 +77,10 @@
             <article class="panel chart-panel">
                 <div class="panel-head">
                     <div>
-                        <p class="panel-kicker">Traffic Focus</p>
-                        <h2>Most Active Source IPs</h2>
+                        <p class="panel-kicker">Phân tích nguồn phát sinh</p>
+                        <h2>Nhóm địa chỉ IP nguồn hoạt động nhiều nhất</h2>
                     </div>
-                    <p class="panel-note">Live count of observed source addresses</p>
+                    <p class="panel-note">Thống kê tần suất xuất hiện của từng địa chỉ nguồn</p>
                 </div>
                 <div class="chart-wrap">
                     <canvas id="myChart"></canvas>
@@ -90,14 +90,14 @@
             <article class="panel insights-panel">
                 <div class="panel-head">
                     <div>
-                        <p class="panel-kicker">Operator Notes</p>
-                        <h2>How to Read This View</h2>
+                        <p class="panel-kicker">Hướng dẫn vận hành</p>
+                        <h2>Cách theo dõi và diễn giải dữ liệu</h2>
                     </div>
                 </div>
                 <ul class="insight-list">
-                    <li>Use the top cards to spot risk spikes before scanning the table.</li>
-                    <li>Source and destination columns preserve LAN and country markers from the classifier output.</li>
-                    <li>Open any flow detail to inspect LIME explanation and reconstruction error ranking.</li>
+                    <li>Ưu tiên theo dõi các chỉ số tổng hợp phía trên để phát hiện nhanh biến động rủi ro.</li>
+                    <li>Đối chiếu địa chỉ nguồn, đích và cổng dịch vụ để xác định bối cảnh kết nối mạng.</li>
+                    <li>Sử dụng chức năng xem chi tiết để kiểm tra giải thích của mô hình và đặc trưng bất thường của từng flow.</li>
                 </ul>
             </article>
         </section>
@@ -105,36 +105,80 @@
         <section class="panel table-panel">
             <div class="panel-head">
                 <div>
-                    <p class="panel-kicker">Recent Events</p>
-                    <h2>Captured Flow Timeline</h2>
+                    <p class="panel-kicker">Sự kiện mạng gần đây</p>
+                    <h2>Danh sách lưu lượng đã được ghi nhận</h2>
                 </div>
-                <p class="panel-note">Newest flows appear at the top</p>
+                <p class="panel-note">Các bản ghi mới nhất được ưu tiên hiển thị phía trên</p>
+            </div>
+
+            <div class="table-toolbar">
+                <div class="table-toolbar-copy">
+                    <strong>Hỗ trợ thao tác phân tích</strong>
+                    <span id="table-status">Bảng đang tự động cập nhật theo thời gian thực. Bạn có thể tạm dừng khi cần phân tích chi tiết.</span>
+                </div>
+                <div class="table-toolbar-actions">
+                    <button id="toggle-live" class="toolbar-button" type="button">Tạm dừng cập nhật bảng</button>
+                    <button id="toggle-priority" class="toolbar-button" type="button">Chỉ xem bản ghi cần ưu tiên</button>
+                </div>
+            </div>
+
+            <div class="priority-block">
+                <div class="panel-head panel-head-compact">
+                    <div>
+                        <p class="panel-kicker">Hàng chờ ưu tiên</p>
+                        <h3>Bản ghi cần phân tích ngay</h3>
+                    </div>
+                    <p class="panel-note">Hệ thống giữ lại tối đa <strong id="priority-count">0</strong> bản ghi từ mức Trung bình trở lên để bạn thao tác thuận tiện hơn</p>
+                </div>
+
+                <div class="table-wrap priority-table-wrap">
+                    <table class="flow-table compact-table" id="priority-details">
+                        <thead>
+                            <tr>
+                                <th>Mã flow</th>
+                                <th>Nguồn</th>
+                                <th>Đích</th>
+                                <th>Dự đoán</th>
+                                <th>Xác suất</th>
+                                <th>Rủi ro</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td colspan="7" class="empty-state">
+                                    Chưa có bản ghi cần ưu tiên phân tích. Các bản ghi từ mức Trung bình trở lên sẽ được giữ lại tại đây.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <div class="table-wrap" id="log">
                 <table class="flow-table" id="details">
                     <thead>
                         <tr>
-                            <th>Flow ID</th>
-                            <th>Source</th>
-                            <th>Src Port</th>
-                            <th>Destination</th>
-                            <th>Dst Port</th>
-                            <th>Protocol</th>
-                            <th>Started</th>
-                            <th>Last Seen</th>
-                            <th>App</th>
+                            <th>Mã flow</th>
+                            <th>Nguồn</th>
+                            <th>Cổng nguồn</th>
+                            <th>Đích</th>
+                            <th>Cổng đích</th>
+                            <th>Giao thức</th>
+                            <th>Bắt đầu</th>
+                            <th>Lần cuối thấy</th>
+                            <th>Ứng dụng</th>
                             <th>PID</th>
-                            <th>Prediction</th>
-                            <th>Probability</th>
-                            <th>Risk</th>
-                            <th>Action</th>
+                            <th>Dự đoán</th>
+                            <th>Xác suất</th>
+                            <th>Rủi ro</th>
+                            <th>Thao tác</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
                             <td colspan="14" class="empty-state">
-                                Waiting for live flow data. Start capture traffic and this dashboard will populate automatically.
+                                Chưa có dữ liệu lưu lượng trực tiếp. Hệ thống sẽ tự động cập nhật ngay khi phát sinh kết nối mạng mới.
                             </td>
                         </tr>
                     </tbody>
@@ -145,7 +189,7 @@
 
     <noscript>
         <div id="noscript">
-            Javascript is disabled in your browser. You must have Javascript enabled to utilize the functionality of this page.
+            Trình duyệt đang tắt JavaScript. Bạn cần bật JavaScript để sử dụng đầy đủ trang này.
         </div>
     </noscript>
 </body>

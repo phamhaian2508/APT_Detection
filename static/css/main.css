@@ -256,6 +256,87 @@ a {
     margin-top: 18px;
 }
 
+.table-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(74, 58, 41, 0.12);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.62);
+}
+
+.table-toolbar-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.table-toolbar-copy strong {
+    color: var(--heading);
+    font-size: 15px;
+}
+
+.table-toolbar-copy span {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.table-toolbar-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.toolbar-button {
+    border: 1px solid rgba(16, 42, 67, 0.16);
+    background: rgba(255, 255, 255, 0.9);
+    color: var(--heading);
+    border-radius: 999px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 140ms ease;
+}
+
+.toolbar-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 16px rgba(16, 42, 67, 0.10);
+}
+
+.toolbar-button.is-active {
+    background: var(--heading);
+    color: #fff;
+    border-color: transparent;
+}
+
+.priority-block {
+    margin-bottom: 16px;
+    padding: 18px;
+    border: 1px solid rgba(182, 59, 36, 0.12);
+    border-radius: 20px;
+    background: linear-gradient(180deg, rgba(255, 250, 244, 0.92), rgba(255, 245, 240, 0.88));
+}
+
+.panel-head-compact {
+    margin-bottom: 12px;
+}
+
+.panel-head-compact h3 {
+    margin: 6px 0 0;
+    font-size: clamp(20px, 1.7vw, 28px);
+    line-height: 1.1;
+    color: var(--heading);
+}
+
+.priority-table-wrap {
+    max-height: 280px;
+}
+
 .table-wrap,
 .feature-table-wrap {
     width: 100%;
@@ -313,6 +394,18 @@ a {
 .feature-table-wrap tbody tr:hover,
 .dataframe tbody tr:hover {
     background: rgba(15, 108, 189, 0.08);
+}
+
+.flow-table tbody tr.flow-row-priority {
+    background: rgba(221, 138, 22, 0.08);
+}
+
+.flow-table tbody tr.flow-row-priority:hover {
+    background: rgba(217, 72, 34, 0.10);
+}
+
+.flow-table tbody tr.flow-row-priority td:first-child {
+    box-shadow: inset 4px 0 0 rgba(217, 72, 34, 0.85);
 }
 
 .empty-state {
@@ -462,6 +555,21 @@ a {
 
 .flag.flag-unknown {
     background: url("../images/thirdparty/unknown.png") no-repeat;
+}
+
+.country-flag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    margin-left: 6px;
+    font-size: 14px;
+    line-height: 1;
+    vertical-align: middle;
+}
+
+.country-flag-unknown {
+    font-size: 12px;
 }
 
 @keyframes pulse {
