@@ -1,5 +1,4 @@
 # Real-time Intrusion Detection Web App
-<b>Project III</b><br>
 <b>Nhóm 8</b><br>
 ## About
 * Real-time Intrusion Detection System implementing Machine Learning. 
