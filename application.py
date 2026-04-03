@@ -65,9 +65,9 @@ socketio = SocketIO(app, async_mode=None, logger=True, engineio_logger=True)
 thread = Thread()
 thread_stop_event = Event()
 
-f = open("output_logs.csv", 'w')
+f = open("output_logs.csv", 'w', newline='', encoding='utf-8-sig')
 w = csv.writer(f)
-f2 = open("input_logs.csv", 'w')
+f2 = open("input_logs.csv", 'w', newline='', encoding='utf-8-sig')
 w2 = csv.writer(f2)
  
 
@@ -123,6 +123,61 @@ cols = ['FlowID',
 'Classification',
 'Probability',
 'Risk']
+
+DISPLAY_LABELS = {
+    'FlowID': 'Mã flow',
+    'FlowDuration': 'Thời lượng flow',
+    'BwdPacketLenMax': 'Độ dài gói tin chiều về lớn nhất',
+    'BwdPacketLenMin': 'Độ dài gói tin chiều về nhỏ nhất',
+    'BwdPacketLenMean': 'Độ dài gói tin chiều về trung bình',
+    'BwdPacketLenStd': 'Độ lệch chuẩn độ dài gói tin chiều về',
+    'FlowIATMean': 'Khoảng thời gian giữa các gói trung bình',
+    'FlowIATStd': 'Độ lệch chuẩn khoảng thời gian giữa các gói',
+    'FlowIATMax': 'Khoảng thời gian giữa các gói lớn nhất',
+    'FlowIATMin': 'Khoảng thời gian giữa các gói nhỏ nhất',
+    'FwdIATTotal': 'Tổng thời gian giữa các gói chiều đi',
+    'FwdIATMean': 'Khoảng thời gian giữa các gói chiều đi trung bình',
+    'FwdIATStd': 'Độ lệch chuẩn thời gian giữa các gói chiều đi',
+    'FwdIATMax': 'Khoảng thời gian giữa các gói chiều đi lớn nhất',
+    'FwdIATMin': 'Khoảng thời gian giữa các gói chiều đi nhỏ nhất',
+    'BwdIATTotal': 'Tổng thời gian giữa các gói chiều về',
+    'BwdIATMean': 'Khoảng thời gian giữa các gói chiều về trung bình',
+    'BwdIATStd': 'Độ lệch chuẩn thời gian giữa các gói chiều về',
+    'BwdIATMax': 'Khoảng thời gian giữa các gói chiều về lớn nhất',
+    'BwdIATMin': 'Khoảng thời gian giữa các gói chiều về nhỏ nhất',
+    'FwdPSHFlags': 'Cờ PSH chiều đi',
+    'FwdPackets_s': 'Số gói chiều đi mỗi giây',
+    'MaxPacketLen': 'Độ dài gói tin lớn nhất',
+    'PacketLenMean': 'Độ dài gói tin trung bình',
+    'PacketLenStd': 'Độ lệch chuẩn độ dài gói tin',
+    'PacketLenVar': 'Phương sai độ dài gói tin',
+    'FINFlagCount': 'Số cờ FIN',
+    'SYNFlagCount': 'Số cờ SYN',
+    'PSHFlagCount': 'Số cờ PSH',
+    'ACKFlagCount': 'Số cờ ACK',
+    'URGFlagCount': 'Số cờ URG',
+    'AvgPacketSize': 'Kích thước gói tin trung bình',
+    'AvgBwdSegmentSize': 'Kích thước segment chiều về trung bình',
+    'InitWinBytesFwd': 'Window ban đầu chiều đi',
+    'InitWinBytesBwd': 'Window ban đầu chiều về',
+    'ActiveMin': 'Thời gian hoạt động ngắn nhất',
+    'IdleMean': 'Thời gian nhàn rỗi trung bình',
+    'IdleStd': 'Độ lệch chuẩn thời gian nhàn rỗi',
+    'IdleMax': 'Thời gian nhàn rỗi lớn nhất',
+    'IdleMin': 'Thời gian nhàn rỗi nhỏ nhất',
+    'Src': 'IP nguồn',
+    'SrcPort': 'Cổng nguồn',
+    'Dest': 'IP đích',
+    'DestPort': 'Cổng đích',
+    'Protocol': 'Giao thức',
+    'FlowStartTime': 'Thời điểm bắt đầu',
+    'FlowLastSeen': 'Thời điểm thấy cuối',
+    'PName': 'Tên ứng dụng',
+    'PID': 'PID',
+    'Classification': 'Dự đoán',
+    'Probability': 'Xác suất',
+    'Risk': 'Mức rủi ro',
+}
 
 ae_features = np.array(['FlowDuration',
 'BwdPacketLengthMax',
@@ -183,9 +238,47 @@ ae_model = keras.models.load_model('models/autoencoder_39ft.hdf5')
 with open('models/model.pkl', 'rb') as f:
     classifier = pickle.load(f)
 
-with open('models/explainer', 'rb') as f:
-    explainer = dill.load(f)
+try:
+    with open('models/explainer', 'rb') as f:
+        explainer = dill.load(f)
+except Exception:
+    traceback.print_exc()
+    explainer = None
+    print("Warning: could not load models/explainer; flow detail will render without LIME explanation.")
 predict_fn_rf = lambda x: classifier.predict_proba(x).astype(float)
+
+PREDICTION_LABELS = {
+    'Benign': 'Lưu lượng hợp lệ',
+    'Botnet': 'Lưu lượng botnet',
+    'DDoS': 'Tấn công DDoS',
+    'DoS': 'Tấn công DoS',
+    'FTP-Patator': 'Tấn công dò quét FTP',
+    'Probe': 'Dò quét thăm dò',
+    'SSH-Patator': 'Tấn công dò quét SSH',
+    'Web Attack': 'Tấn công ứng dụng web',
+}
+
+RISK_LABELS = {
+    'Very High': 'Rất cao',
+    'High': 'Cao',
+    'Medium': 'Trung bình',
+    'Low': 'Thấp',
+    'Minimal': 'Rất thấp',
+}
+
+
+def translate_prediction_label(label):
+    return PREDICTION_LABELS.get(label, label)
+
+
+def translate_risk_label(label):
+    return RISK_LABELS.get(label, label)
+
+
+def country_code_to_flag(country_code):
+    if not country_code or len(country_code) != 2 or not country_code.isalpha():
+        return None
+    return ''.join(chr(127397 + ord(char.upper())) for char in country_code)
 
 def classify(features):
     # preprocess
@@ -205,11 +298,15 @@ def classify(features):
         if not ipaddress.ip_address(ip).is_private:
             country = ipInfo(ip)
             if country is not None and country not in  ['ano', 'unknown']:
-                img = ' <img src="static/images/blank.gif" class="flag flag-' + country.lower() + '" title="' + country + '">'
+                flag = country_code_to_flag(country)
+                if flag is not None:
+                    img = ' <span class="country-flag" title="' + country + '">' + flag + '</span>'
+                else:
+                    img = ' <span class="flag flag-' + country.lower() + '" title="' + country + '"></span>'
             else:
-                img = ' <img src="static/images/blank.gif" class="flag flag-unknown" title="UNKNOWN">'
+                img = ' <span class="country-flag country-flag-unknown" title="UNKNOWN">🌐</span>'
         else:
-            img = ' <img src="static/images/lan.gif" height="11px" style="margin-bottom: 0px" title="LAN">'
+            img = ' <img src="/static/images/lan.gif" height="11px" style="margin-bottom: 0px" title="LAN">'
         feature_string[i]+=img
 
     if np.nan in features:
@@ -221,22 +318,23 @@ def classify(features):
     proba_score = [proba[0].max()]
     proba_risk = sum(list(proba[0,1:]))
     if proba_risk > 0.8:
-        risk = ["Very High"]
+        risk_en = "Very High"
     elif proba_risk > 0.6:
-        risk = ["High"]
+        risk_en = "High"
     elif proba_risk > 0.4:
-        risk = ["Medium"]
+        risk_en = "Medium"
     elif proba_risk > 0.2:
-        risk = ["Low"]
+        risk_en = "Low"
     else:
-        risk = ["Minimal"]
+        risk_en = "Minimal"
 
     # x = K.process(features[0])
     # z_scores = round((x-m)/s,2)
     # p_values = norm.sf(abs(z_scores))*2
 
 
-    classification = [str(result[0])]
+    classification = [translate_prediction_label(str(result[0]))]
+    risk = [translate_risk_label(risk_en)]
     if result != 'Benign':
         print(feature_string + classification + proba_score )
 
@@ -372,22 +470,25 @@ def flow_detail():
     proba_score = list(predict_fn_rf(choosen_instance))
     risk_proba =  sum(proba_score[0][1:])
     if risk_proba > 0.8:
-        risk_level = "Very High"
+        risk_level = "Rất cao"
         risk_class = "risk-very-high"
     elif risk_proba > 0.6:
-        risk_level = "High"
+        risk_level = "Cao"
         risk_class = "risk-high"
     elif risk_proba > 0.4:
-        risk_level = "Medium"
+        risk_level = "Trung bình"
         risk_class = "risk-medium"
     elif risk_proba > 0.2:
-        risk_level = "Low"
+        risk_level = "Thấp"
         risk_class = "risk-low"
     else:
-        risk_level = "Minimal"
+        risk_level = "Rất thấp"
         risk_class = "risk-minimal"
-    risk = '<div class="risk-summary {0}"><span class="risk-label">Risk</span><span class="risk-pill {0}">{1}</span></div>'.format(risk_class, risk_level)
-    exp = explainer.explain_instance(choosen_instance[0], predict_fn_rf, num_features=6, top_labels = 1)
+    risk = '<div class="risk-summary {0}"><span class="risk-label">Mức rủi ro</span><span class="risk-pill {0}">{1}</span></div>'.format(risk_class, risk_level)
+    exp_html = None
+    if explainer is not None:
+        exp = explainer.explain_instance(choosen_instance[0], predict_fn_rf, num_features=6, top_labels = 1)
+        exp_html = exp.as_html()
 
     X_transformed = ae_scaler.transform(X)
     reconstruct = ae_model.predict(X_transformed)
@@ -407,7 +508,8 @@ def flow_detail():
 
     # return render_template('detail.html',  tables=[flow.to_html(classes='data')], titles=flow.columns.values, explain = exp.as_html())
 
-    return render_template('detail.html', tables=[flow.reset_index(drop=True).transpose().to_html(classes='data')], exp=exp.as_html(), ae_plot = plot_div, risk = risk) # titles=flow.columns.values, classifier='RF Classifier'
+    flow_table = flow.reset_index(drop=True).transpose().rename(index=DISPLAY_LABELS).to_html(classes='data')
+    return render_template('detail.html', tables=[flow_table], exp=exp_html, ae_plot = plot_div, risk = risk) # titles=flow.columns.values, classifier='RF Classifier'
 
 # @app.route('/flow-detail')
 # def flow_detail():

@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta http-equiv="Content-Type" content="text/html;charset=utf8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>Flow Detail</title>
+    <title>Phân Tích Chi Tiết Lưu Lượng</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -22,18 +22,18 @@
     <div class="dashboard-shell detail-shell">
         <header class="hero-panel detail-hero">
             <div class="hero-copy">
-                <p class="eyebrow">Explainable Threat Analysis</p>
-                <h1>Flow Investigation</h1>
+                <p class="eyebrow">Phân tích và giải thích quyết định của mô hình</p>
+                <h1>Phân tích chi tiết lưu lượng mạng</h1>
                 <p class="hero-text">
-                    Review model confidence, anomaly contribution, and full feature context for the selected network flow.
+                    Cung cấp góc nhìn chi tiết về mức độ tin cậy của mô hình, dấu hiệu bất thường và toàn bộ đặc trưng của bản ghi được chọn.
                 </p>
             </div>
             <div class="risk-card">
-                <span class="meta-label">Current Risk</span>
+                <span class="meta-label">Mức rủi ro hiện tại</span>
                 <div class="risk-badge-block">
                     {{ risk|safe }}
                 </div>
-                <a class="back-link" href="/">Back to dashboard</a>
+                <a class="back-link" href="/">Quay lại màn hình tổng quan</a>
             </div>
         </header>
 
@@ -41,16 +41,16 @@
             <article class="panel detail-panel">
                 <div class="panel-head">
                     <div>
-                        <p class="panel-kicker">Classifier Insight</p>
-                        <h2>LIME Explanation</h2>
+                        <p class="panel-kicker">Giải thích từ bộ phân loại</p>
+                        <h2>Phân tích yếu tố ảnh hưởng bằng LIME</h2>
                     </div>
-                    <p class="panel-note">Top features influencing the Random Forest decision</p>
+                    <p class="panel-note">Các đặc trưng có tác động mạnh nhất tới quyết định phân loại của Random Forest</p>
                 </div>
                 <div class="explain-wrap">
                     {% if exp %}
                         {{ exp|safe }}
                     {% else %}
-                        <p class="empty-copy">No explanation was generated for this flow.</p>
+                        <p class="empty-copy">Hiện chưa thể tạo giải thích cho bản ghi này.</p>
                     {% endif %}
                 </div>
             </article>
@@ -58,10 +58,10 @@
             <article class="panel detail-panel">
                 <div class="panel-head">
                     <div>
-                        <p class="panel-kicker">Anomaly Context</p>
-                        <h2>Autoencoder Reconstruction Error</h2>
+                        <p class="panel-kicker">Đánh giá bất thường</p>
+                        <h2>Phân tích sai số tái tạo của Autoencoder</h2>
                     </div>
-                    <p class="panel-note">Largest deviations from learned normal traffic behavior</p>
+                    <p class="panel-note">Các đặc trưng sai lệch nhiều nhất so với mẫu lưu lượng bình thường mà mô hình đã học</p>
                 </div>
                 <div class="plot-wrap">
                     {{ ae_plot|safe }}
@@ -72,10 +72,10 @@
         <section class="panel detail-panel">
             <div class="panel-head">
                 <div>
-                    <p class="panel-kicker">Raw Feature View</p>
-                    <h2>All Features Used for Evaluation</h2>
+                    <p class="panel-kicker">Dữ liệu phục vụ đánh giá</p>
+                    <h2>Toàn bộ đặc trưng đầu vào của bản ghi</h2>
                 </div>
-                <p class="panel-note">Scrollable table for full packet-flow context</p>
+                <p class="panel-note">Bảng chi tiết cho phép rà soát đầy đủ ngữ cảnh của lưu lượng</p>
             </div>
             <div class="feature-table-wrap">
                 {% for table in tables %}
