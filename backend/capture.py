@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import time
-import traceback
+import logging
 from threading import Event
 from typing import Callable, Dict, Optional, Tuple
 
@@ -13,11 +13,12 @@ from flow.PacketInfo import PacketInfo
 
 
 class ProcessResolver:
-    def __init__(self, refresh_interval: float = 2.0) -> None:
+    def __init__(self, refresh_interval: float = 2.0, logger: logging.Logger | None = None) -> None:
         self.refresh_interval = refresh_interval
         self._last_refresh = 0.0
         self._port_index: Dict[int, Tuple[Optional[int], str]] = {}
         self._pid_name_cache: Dict[int, str] = {}
+        self.logger = logger or logging.getLogger("apt_detection.capture.process")
 
     def resolve(self, src_port: int, dest_port: int) -> Tuple[Optional[int], str]:
         now = time.monotonic()
@@ -45,6 +46,7 @@ class ProcessResolver:
                 process_name = self._process_name(pid)
                 port_index[int(port)] = (pid, process_name)
         except (psutil.Error, OSError):
+            self.logger.debug("Could not refresh process snapshot.", exc_info=True)
             return
 
         if port_index:
@@ -71,12 +73,15 @@ class CaptureService:
         on_flow_terminated: Callable[[list], None],
         flow_timeout: int = 600,
         sniff_timeout: float = 1.0,
+        process_refresh_interval: float = 2.0,
+        logger: logging.Logger | None = None,
     ) -> None:
         self.on_flow_terminated = on_flow_terminated
         self.flow_timeout = flow_timeout
         self.sniff_timeout = sniff_timeout
         self.current_flows: Dict[str, Flow] = {}
-        self.process_resolver = ProcessResolver()
+        self.logger = logger or logging.getLogger("apt_detection.capture")
+        self.process_resolver = ProcessResolver(process_refresh_interval, logger=self.logger.getChild("process"))
 
     def process_packet(self, packet_data) -> None:
         try:
@@ -99,7 +104,11 @@ class CaptureService:
             packet.setWinBytes(packet_data)
             packet.setFwdID()
             packet.setBwdID()
+        except AttributeError:
+            self.logger.debug("Skipping packet because required attributes were missing.", exc_info=True)
+            return
 
+        try:
             pid, process_name = self.process_resolver.resolve(packet.getSrcPort(), packet.getDestPort())
             packet.setProcess(pid, process_name)
 
@@ -130,12 +139,11 @@ class CaptureService:
                 return
 
             self.current_flows[packet.getFwdID()] = Flow(packet)
-        except AttributeError:
-            return
         except Exception:
-            traceback.print_exc()
+            self.logger.exception("Unhandled error while processing packet.")
 
     def sniff_forever(self, stop_event: Event) -> None:
+        self.logger.info("Capture loop started.")
         while not stop_event.is_set():
             sniff(
                 prn=self.process_packet,
@@ -144,6 +152,7 @@ class CaptureService:
                 stop_filter=lambda _: stop_event.is_set(),
             )
             self.reap_expired_flows()
+        self.logger.info("Capture loop stopping, flushing active flows.")
         self.flush()
 
     def flush(self) -> None:
@@ -160,6 +169,8 @@ class CaptureService:
             flow = self.current_flows.pop(flow_key, None)
             if flow is not None:
                 self.on_flow_terminated(flow.terminated())
+        if expired_keys and not force:
+            self.logger.debug("Reaped %s expired flows.", len(expired_keys))
 
     def _is_expired(self, flow: Flow, current_time: float) -> bool:
         return (current_time - flow.getFlowLastSeen()) > self.flow_timeout

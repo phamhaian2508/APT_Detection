@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
-    <title>Hệ Thống Giám Sát APT Detection</title>
+    <title>Hệ thống giám sát APT Detection</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,11 +27,12 @@
                 <p class="eyebrow">Giám sát xâm nhập mạng theo thời gian thực</p>
                 <h1>Hệ thống giám sát và phát hiện APT</h1>
                 <p class="hero-text">
-                    Theo dõi liên tục các luồng mạng, phát hiện sớm dấu hiệu bất thường, và hỗ trợ phân tích quyết định của mô hình trên cùng một giao diện tập trung.
+                    Theo dõi liên tục các luồng mạng, phát hiện sớm dấu hiệu bất thường và hỗ trợ
+                    phân tích quyết định của mô hình trên cùng một giao diện tập trung.
                 </p>
-                <div class="hero-status">
-                    <span class="status-dot"></span>
-                    <span>Hệ thống đã kết nối với nguồn dữ liệu bắt gói tin trực tiếp</span>
+                <div class="hero-status" id="hero-runtime-banner">
+                    <span class="status-dot" id="hero-runtime-dot"></span>
+                    <span id="hero-runtime-text">Đang khởi tạo kết nối realtime và kiểm tra sức khỏe hệ thống.</span>
                 </div>
             </div>
             <div class="hero-meta">
@@ -45,7 +46,7 @@
                 </div>
                 <div class="meta-card">
                     <span class="meta-label">Trang chi tiết</span>
-                    <strong>Phân tích và giải thích bằng LIME</strong>
+                    <strong>Giải thích bằng LIME và phân tích AE</strong>
                 </div>
             </div>
         </header>
@@ -73,6 +74,78 @@
             </article>
         </section>
 
+        <section class="runtime-grid">
+            <article class="panel runtime-panel runtime-panel-wide">
+                <div class="panel-head">
+                    <div>
+                        <p class="panel-kicker">Sức khỏe hệ thống</p>
+                        <h2>Trạng thái xử lý hiện tại</h2>
+                    </div>
+                    <p class="panel-note">
+                        Theo dõi nhanh kết nối realtime, luồng capture và hàng đợi xử lý để biết
+                        hệ thống đang ổn định hay cần kiểm tra.
+                    </p>
+                </div>
+                <div class="runtime-matrix">
+                    <div class="runtime-card">
+                        <span class="runtime-label">Socket realtime</span>
+                        <strong class="runtime-value" id="runtime-socket">Đang kiểm tra</strong>
+                        <span class="runtime-meta" id="runtime-socket-note">Chưa có trạng thái kết nối.</span>
+                    </div>
+                    <div class="runtime-card">
+                        <span class="runtime-label">Capture engine</span>
+                        <strong class="runtime-value" id="runtime-capture">Đang kiểm tra</strong>
+                        <span class="runtime-meta" id="runtime-capture-note">Chưa có dữ liệu runtime.</span>
+                    </div>
+                    <div class="runtime-card">
+                        <span class="runtime-label">Worker xử lý</span>
+                        <strong class="runtime-value" id="runtime-worker">Đang kiểm tra</strong>
+                        <span class="runtime-meta" id="runtime-worker-note">Chờ trạng thái worker.</span>
+                    </div>
+                    <div class="runtime-card">
+                        <span class="runtime-label">Hàng đợi</span>
+                        <strong class="runtime-value" id="runtime-queue">0 / 0</strong>
+                        <span class="runtime-meta" id="runtime-queue-note">Chưa có cấu hình hàng đợi.</span>
+                    </div>
+                </div>
+            </article>
+
+            <article class="panel runtime-panel">
+                <div class="panel-head">
+                    <div>
+                        <p class="panel-kicker">Chỉ số vận hành</p>
+                        <h2>Tình trạng phiên chạy</h2>
+                    </div>
+                </div>
+                <div class="runtime-summary">
+                    <div class="runtime-summary-row">
+                        <span>Flow đang mở</span>
+                        <strong id="runtime-active-flows">0</strong>
+                    </div>
+                    <div class="runtime-summary-row">
+                        <span>Flow đã xử lý</span>
+                        <strong id="runtime-processed-flows">0</strong>
+                    </div>
+                    <div class="runtime-summary-row">
+                        <span>Flow bị bỏ</span>
+                        <strong id="runtime-dropped-flows">0</strong>
+                    </div>
+                    <div class="runtime-summary-row">
+                        <span>Lỗi worker</span>
+                        <strong id="runtime-worker-errors">0</strong>
+                    </div>
+                    <div class="runtime-summary-row">
+                        <span>Uptime</span>
+                        <strong id="runtime-uptime">0s</strong>
+                    </div>
+                </div>
+                <div class="runtime-flags">
+                    <span class="runtime-flag" id="runtime-geolocation">GeoIP: đang kiểm tra</span>
+                    <span class="runtime-flag" id="runtime-explanations">LIME: đang kiểm tra</span>
+                </div>
+            </article>
+        </section>
+
         <section class="dashboard-grid">
             <article class="panel chart-panel">
                 <div class="panel-head">
@@ -80,7 +153,7 @@
                         <p class="panel-kicker">Phân tích nguồn phát sinh</p>
                         <h2>Nhóm địa chỉ IP nguồn hoạt động nhiều nhất</h2>
                     </div>
-                    <p class="panel-note">Thống kê tần suất xuất hiện của từng địa chỉ nguồn</p>
+                    <p class="panel-note">Thống kê tần suất xuất hiện của từng địa chỉ nguồn trong dữ liệu hiện tại.</p>
                 </div>
                 <div class="chart-wrap">
                     <canvas id="myChart"></canvas>
@@ -95,9 +168,9 @@
                     </div>
                 </div>
                 <ul class="insight-list">
-                    <li>Ưu tiên theo dõi các chỉ số tổng hợp phía trên để phát hiện nhanh biến động rủi ro.</li>
-                    <li>Đối chiếu địa chỉ nguồn, đích và cổng dịch vụ để xác định bối cảnh kết nối mạng.</li>
-                    <li>Sử dụng chức năng xem chi tiết để kiểm tra giải thích của mô hình và đặc trưng bất thường của từng flow.</li>
+                    <li>Ưu tiên theo dõi khu vực Sức khỏe hệ thống để phát hiện nghẽn queue hoặc worker lỗi trước khi đọc alert.</li>
+                    <li>Dùng bộ lọc để thu hẹp theo IP, cổng, giao thức hoặc loại cảnh báo trước khi phân tích chi tiết.</li>
+                    <li>Mở trang flow detail khi cần xem yếu tố ảnh hưởng đến dự đoán và tín hiệu bất thường từ Autoencoder.</li>
                 </ul>
             </article>
         </section>
@@ -108,7 +181,9 @@
                     <p class="panel-kicker">Sự kiện mạng gần đây</p>
                     <h2>Danh sách lưu lượng đã được ghi nhận</h2>
                 </div>
-                <p class="panel-note">Các bản ghi mới nhất được ưu tiên hiển thị phía trên</p>
+                <p class="panel-note">
+                    Các bản ghi mới nhất được ưu tiên hiển thị phía trên và tự động làm mới khi hệ thống đang ở chế độ live.
+                </p>
             </div>
 
             <div class="table-toolbar">
@@ -153,7 +228,7 @@
                     </select>
                 </div>
                 <div class="filter-field">
-                    <label for="filter-protocol">Protocol</label>
+                    <label for="filter-protocol">Giao thức</label>
                     <select id="filter-protocol">
                         <option value="">Tất cả</option>
                         <option value="TCP">TCP</option>
@@ -173,7 +248,7 @@
                         <p class="panel-kicker">Hàng chờ ưu tiên</p>
                         <h3>Bản ghi cần phân tích ngay</h3>
                     </div>
-                    <p class="panel-note">Hệ thống giữ lại tối đa <strong id="priority-count">0</strong> bản ghi từ mức Trung bình trở lên để bạn thao tác thuận tiện hơn</p>
+                    <p class="panel-note">Hệ thống giữ lại tối đa <strong id="priority-count">0</strong> bản ghi từ mức Trung bình trở lên để bạn thao tác thuận tiện hơn.</p>
                 </div>
 
                 <div class="table-wrap priority-table-wrap">

@@ -129,6 +129,25 @@ PREDICTION_LABELS = {
     "Web Attack": "Tấn công ứng dụng web",
 }
 
+PREDICTION_ALIASES = {
+    "Luu luong hop le": "Lưu lượng hợp lệ",
+    "LÆ°u lÆ°á»£ng há»£p lá»‡": "Lưu lượng hợp lệ",
+    "Luu luong botnet": "Lưu lượng botnet",
+    "LÆ°u lÆ°á»£ng botnet": "Lưu lượng botnet",
+    "Tan cong DDoS": "Tấn công DDoS",
+    "Táº¥n cÃ´ng DDoS": "Tấn công DDoS",
+    "Tan cong DoS": "Tấn công DoS",
+    "Táº¥n cÃ´ng DoS": "Tấn công DoS",
+    "Tan cong do quet FTP": "Tấn công dò quét FTP",
+    "Táº¥n cÃ´ng dÃ² quÃ©t FTP": "Tấn công dò quét FTP",
+    "Do quet tham do": "Dò quét thăm dò",
+    "DÃ² quÃ©t thÄƒm dÃ²": "Dò quét thăm dò",
+    "Tan cong do quet SSH": "Tấn công dò quét SSH",
+    "Táº¥n cÃ´ng dÃ² quÃ©t SSH": "Tấn công dò quét SSH",
+    "Tan cong ung dung web": "Tấn công ứng dụng web",
+    "Táº¥n cÃ´ng á»©ng dá»¥ng web": "Tấn công ứng dụng web",
+}
+
 RISK_LABELS = {
     "Very High": "Rất cao",
     "High": "Cao",
@@ -137,12 +156,27 @@ RISK_LABELS = {
     "Minimal": "Rất thấp",
 }
 
+RISK_ALIASES = {
+    "Rat cao": "Rất cao",
+    "Ráº¥t cao": "Rất cao",
+    "Trung binh": "Trung bình",
+    "Trung bÃ¬nh": "Trung bình",
+    "Thap": "Thấp",
+    "Tháº¥p": "Thấp",
+    "Rat thap": "Rất thấp",
+    "Ráº¥t tháº¥p": "Rất thấp",
+}
+
 RISK_CLASSES = {
     "Rất cao": "risk-very-high",
     "Cao": "risk-high",
     "Trung bình": "risk-medium",
     "Thấp": "risk-low",
     "Rất thấp": "risk-minimal",
+    "Rat cao": "risk-very-high",
+    "Trung binh": "risk-medium",
+    "Thap": "risk-low",
+    "Rat thap": "risk-minimal",
     "Very High": "risk-very-high",
     "High": "risk-high",
     "Medium": "risk-medium",
@@ -158,11 +192,13 @@ def _serialize_value(value: Any) -> Any:
 
 
 def translate_prediction_label(label: str) -> str:
-    return PREDICTION_LABELS.get(label, label)
+    mapped_label = PREDICTION_LABELS.get(label, label)
+    return PREDICTION_ALIASES.get(mapped_label, mapped_label)
 
 
 def translate_risk_label(label: str) -> str:
-    return RISK_LABELS.get(label, label)
+    mapped_label = RISK_LABELS.get(label, label)
+    return RISK_ALIASES.get(mapped_label, mapped_label)
 
 
 def risk_label_from_probability(score: float) -> str:
@@ -180,14 +216,18 @@ def risk_label_from_probability(score: float) -> str:
 def risk_rank(label: str) -> int:
     normalized = (label or "").strip().lower()
     mapping = {
+        "rat cao": 4,
         "rất cao": 4,
         "very high": 4,
         "cao": 3,
         "high": 3,
+        "trung binh": 2,
         "trung bình": 2,
         "medium": 2,
+        "thap": 1,
         "thấp": 1,
         "low": 1,
+        "rat thap": 0,
         "rất thấp": 0,
         "minimal": 0,
     }
@@ -195,7 +235,25 @@ def risk_rank(label: str) -> int:
 
 
 def risk_css_class(label: str) -> str:
-    return RISK_CLASSES.get(label, "risk-minimal")
+    return RISK_CLASSES.get(translate_risk_label(label), "risk-minimal")
+
+
+def prediction_filter_values(label: str) -> List[str]:
+    normalized = translate_prediction_label(label)
+    values = {label, normalized}
+    for alias, canonical in PREDICTION_ALIASES.items():
+        if canonical == normalized:
+            values.add(alias)
+    return [value for value in values if value]
+
+
+def risk_filter_values(label: str) -> List[str]:
+    normalized = translate_risk_label(label)
+    values = {label, normalized}
+    for alias, canonical in RISK_ALIASES.items():
+        if canonical == normalized:
+            values.add(alias)
+    return [value for value in values if value]
 
 
 def build_alert_record(features: Iterable[Any], classification: str, probability: float, risk: str) -> Dict[str, Any]:

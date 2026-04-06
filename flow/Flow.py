@@ -104,6 +104,25 @@ class Flow:
     def getFlowStartTime(self):
         return self.flowStartTime
 
+    def live_snapshot(self, flow_key):
+        return {
+            "flowKey": flow_key,
+            "src": self.flowFeatures.getSrc(),
+            "srcPort": self.flowFeatures.getSrcPort(),
+            "dst": self.flowFeatures.getDest(),
+            "dstPort": self.flowFeatures.getDestPort(),
+            "protocol": self.flowFeatures.getProtocol(),
+            "start": datetime.fromtimestamp(self.getFlowStartTime()).strftime("%Y-%m-%d %H:%M:%S"),
+            "lastSeen": datetime.fromtimestamp(self.getFlowLastSeen()).strftime("%Y-%m-%d %H:%M:%S"),
+            "appName": self.flowFeatures.getPName(),
+            "pid": self.flowFeatures.getPID(),
+            "prediction": "Đang theo dõi",
+            "probability": "",
+            "risk": "Theo dõi",
+            "isProvisional": True,
+            "packetsSeen": self.packet_count,
+        }
+
     def new(self, packetInfo, direction):
         if direction == 'bwd':
             if self.bwd_packet_count == 0:

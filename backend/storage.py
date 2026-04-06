@@ -8,7 +8,14 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, Iterator, List, Tuple
 
-from backend.features import FLOW_METADATA_FIELDS, MODEL_FEATURE_FIELDS, ordered_record, risk_rank
+from backend.features import (
+    FLOW_METADATA_FIELDS,
+    MODEL_FEATURE_FIELDS,
+    ordered_record,
+    prediction_filter_values,
+    risk_filter_values,
+    risk_rank,
+)
 
 
 class AlertRepository:
@@ -17,11 +24,13 @@ class AlertRepository:
         db_path: str = "data/alerts.db",
         output_csv_path: str = "output_logs.csv",
         input_csv_path: str = "input_logs.csv",
+        write_compatibility_logs: bool = False,
     ) -> None:
         self.db_path = Path(db_path)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.output_csv_path = Path(output_csv_path)
         self.input_csv_path = Path(input_csv_path)
+        self.write_compatibility_logs = write_compatibility_logs
         self._write_lock = Lock()
         self._initialize()
 
@@ -61,6 +70,17 @@ class AlertRepository:
             connection.execute("CREATE INDEX IF NOT EXISTS idx_alerts_src ON alerts (src)")
             connection.execute("CREATE INDEX IF NOT EXISTS idx_alerts_dest ON alerts (dest)")
             connection.commit()
+
+    def reset_runtime_data(self, clear_csv_logs: bool = True) -> None:
+        with self._write_lock:
+            with self._connect() as connection:
+                connection.execute("DELETE FROM alerts")
+                connection.execute("DELETE FROM sqlite_sequence WHERE name = 'alerts'")
+                connection.commit()
+
+        if clear_csv_logs:
+            self.output_csv_path.write_text("", encoding="utf-8-sig")
+            self.input_csv_path.write_text("", encoding="utf-8-sig")
 
     def save_alert(self, record: Dict[str, Any]) -> Dict[str, Any]:
         base_record = dict(record)
@@ -229,13 +249,15 @@ class AlertRepository:
 
         risk_value = (filters.get("risk") or "").strip()
         if risk_value:
-            conditions.append("risk = ?")
-            params.append(risk_value)
+            risk_values = risk_filter_values(risk_value)
+            conditions.append("risk IN (" + ", ".join(["?"] * len(risk_values)) + ")")
+            params.extend(risk_values)
 
         prediction_value = (filters.get("prediction") or "").strip()
         if prediction_value:
-            conditions.append("classification = ?")
-            params.append(prediction_value)
+            prediction_values = prediction_filter_values(prediction_value)
+            conditions.append("classification IN (" + ", ".join(["?"] * len(prediction_values)) + ")")
+            params.extend(prediction_values)
 
         protocol_value = (filters.get("protocol") or "").strip()
         if protocol_value:
@@ -247,6 +269,8 @@ class AlertRepository:
         return "WHERE " + " AND ".join(conditions), params
 
     def _append_compatibility_logs(self, record: Dict[str, Any]) -> None:
+        if not self.write_compatibility_logs:
+            return
         model_values = [record[field] for field in MODEL_FEATURE_FIELDS]
         flow_info = [record[field] for field in FLOW_METADATA_FIELDS]
         prediction_row = [record["Classification"], record["Probability"], record["Risk"]]

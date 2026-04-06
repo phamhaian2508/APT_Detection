@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ipaddress
 import json
+import logging
 import pickle
 import traceback
 from functools import lru_cache
@@ -31,11 +32,13 @@ from backend.features import (
 
 
 class GeoResolver:
-    def __init__(self) -> None:
+    def __init__(self, enabled: bool = True, logger: logging.Logger | None = None) -> None:
         self._lock = Lock()
         self._country_cache: Dict[str, str] = {}
         self._pending_addresses: set[str] = set()
         self._executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="geo-resolver")
+        self.enabled = enabled
+        self.logger = logger or logging.getLogger("apt_detection.inference.geo")
 
     @lru_cache(maxsize=1024)
     def _fetch_country_code(self, address: str) -> str | None:
@@ -45,6 +48,7 @@ class GeoResolver:
             payload = json.load(response)
             return payload.get("country")
         except Exception:
+            self.logger.debug("Geolocation lookup failed for %s.", address, exc_info=True)
             return None
 
     def decorate_ip(self, address: str) -> str:
@@ -52,6 +56,9 @@ class GeoResolver:
             if ipaddress.ip_address(address).is_private:
                 return f'{address} <img src="/static/images/lan.gif" height="11px" style="margin-bottom: 0px" title="LAN">'
         except ValueError:
+            return address
+
+        if not self.enabled:
             return address
 
         country = self._cached_country_code(address)
@@ -83,20 +90,24 @@ class GeoResolver:
 
 
 class InferenceService:
-    def __init__(self) -> None:
+    def __init__(self, enable_geolocation: bool = True, enable_explanations: bool = True, logger: logging.Logger | None = None) -> None:
         self._predict_lock = Lock()
-        self.geo_resolver = GeoResolver()
+        self.logger = logger or logging.getLogger("apt_detection.inference")
+        self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
         self.ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
         self.ae_model = keras.models.load_model("models/autoencoder_39ft.hdf5")
         with open("models/model.pkl", "rb") as model_file:
             self.classifier = pickle.load(model_file)
-        try:
-            with open("models/explainer", "rb") as explain_file:
-                self.explainer = dill.load(explain_file)
-        except Exception:
-            traceback.print_exc()
-            self.explainer = None
-            print("Warning: could not load models/explainer; flow detail will render without LIME explanation.")
+        self.explainer = None
+        if enable_explanations:
+            try:
+                with open("models/explainer", "rb") as explain_file:
+                    self.explainer = dill.load(explain_file)
+            except Exception:
+                traceback.print_exc()
+                self.logger.warning("Could not load models/explainer; detail view will omit LIME explanation.")
+        else:
+            self.logger.info("LIME explanations are disabled by configuration.")
 
     def classify(self, features: List[Any]) -> Dict[str, Any] | None:
         try:
@@ -118,8 +129,18 @@ class InferenceService:
         return build_alert_record(features, classification, probability_score, risk_label)
 
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        prediction = translate_prediction_label(record["Classification"])
+        risk = translate_risk_label(record["Risk"])
+        flow_key = "{src}-{dst}-{src_port}-{dst_port}-{protocol}".format(
+            src=record["Src"],
+            dst=record["Dest"],
+            src_port=record["SrcPort"],
+            dst_port=record["DestPort"],
+            protocol=record["Protocol"],
+        )
         return {
             "id": record["FlowID"],
+            "flowKey": flow_key,
             "src": record["Src"],
             "srcDisplay": self.geo_resolver.decorate_ip(record["Src"]),
             "srcPort": record["SrcPort"],
@@ -131,9 +152,10 @@ class InferenceService:
             "lastSeen": record["FlowLastSeen"],
             "appName": record["PName"],
             "pid": record["PID"],
-            "prediction": record["Classification"],
+            "prediction": prediction,
             "probability": record["Probability"],
-            "risk": record["Risk"],
+            "risk": risk,
+            "isProvisional": False,
         }
 
     def build_detail_context(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -181,8 +203,12 @@ class InferenceService:
             output_type="div",
         )
 
+        display_record = dict(record)
+        display_record["Classification"] = translate_prediction_label(display_record["Classification"])
+        display_record["Risk"] = translate_risk_label(display_record["Risk"])
+
         flow_table = (
-            pd.DataFrame.from_dict(record, orient="index", columns=["Value"])
+            pd.DataFrame.from_dict(display_record, orient="index", columns=["Value"])
             .rename(index=DISPLAY_LABELS)
             .to_html(classes="data")
         )

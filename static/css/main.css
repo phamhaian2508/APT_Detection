@@ -133,6 +133,16 @@ a {
     animation: pulse 1.8s infinite;
 }
 
+.status-dot.is-warning {
+    background: #dd8a16;
+    box-shadow: 0 0 0 8px rgba(221, 138, 22, 0.14);
+}
+
+.status-dot.is-danger {
+    background: #d94822;
+    box-shadow: 0 0 0 8px rgba(217, 72, 34, 0.14);
+}
+
 .hero-meta {
     display: grid;
     gap: 12px;
@@ -159,6 +169,107 @@ a {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
+}
+
+.runtime-grid {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.85fr);
+    gap: 16px;
+}
+
+.runtime-panel {
+    min-height: 100%;
+}
+
+.runtime-panel-wide {
+    min-width: 0;
+}
+
+.runtime-matrix {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.runtime-card {
+    display: grid;
+    gap: 8px;
+    padding: 18px;
+    border-radius: 18px;
+    border: 1px solid rgba(74, 58, 41, 0.12);
+    background: rgba(255, 255, 255, 0.74);
+}
+
+.runtime-label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.runtime-value {
+    font-family: "Space Grotesk", sans-serif;
+    color: var(--heading);
+    font-size: clamp(22px, 2vw, 30px);
+    line-height: 1.1;
+}
+
+.runtime-meta {
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.runtime-summary {
+    display: grid;
+    gap: 12px;
+}
+
+.runtime-summary-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(74, 58, 41, 0.1);
+}
+
+.runtime-summary-row:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.runtime-summary-row span {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.runtime-summary-row strong {
+    color: var(--heading);
+    font-family: "Space Grotesk", sans-serif;
+    font-size: 22px;
+}
+
+.runtime-flags {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.runtime-flag {
+    display: inline-flex;
+    align-items: center;
+    min-height: 36px;
+    padding: 0 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(16, 42, 67, 0.14);
+    background: rgba(255, 255, 255, 0.84);
+    color: var(--heading);
+    font-size: 13px;
+    font-weight: 600;
 }
 
 .stat-card {

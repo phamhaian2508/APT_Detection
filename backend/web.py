@@ -5,31 +5,44 @@ from datetime import datetime
 from pathlib import Path
 from queue import Empty, Full, Queue
 from threading import Event, Lock
-import traceback
+import logging
+import time
 from typing import Any, Dict
 
-from flask import Flask, Response, abort, jsonify, render_template, request
+from flask import Flask, Response, abort, jsonify, render_template, request, send_from_directory
 from flask_socketio import SocketIO
 
+from backend.config import AppConfig
 from backend.capture import CaptureService
 from backend.inference import InferenceService
+from backend.logging_utils import setup_logging
 from backend.storage import AlertRepository
 
 
 class AppRuntime:
-    def __init__(self, socketio: SocketIO, repository: AlertRepository, inference: InferenceService) -> None:
+    def __init__(self, socketio: SocketIO, repository: AlertRepository, inference: InferenceService, config: AppConfig, logger: logging.Logger) -> None:
         self.socketio = socketio
         self.repository = repository
         self.inference = inference
-        self.capture = CaptureService(self.handle_terminated_flow)
+        self.config = config
+        self.logger = logger
+        self.capture = CaptureService(
+            self.handle_terminated_flow,
+            flow_timeout=config.flow_timeout,
+            sniff_timeout=config.sniff_timeout,
+            process_refresh_interval=config.process_refresh_interval,
+            logger=logger.getChild("capture"),
+        )
         self.thread_stop_event = Event()
         self.capture_thread = None
         self.worker_thread = None
         self.thread_lock = Lock()
         self.metrics_lock = Lock()
-        self.flow_queue: Queue[list] = Queue(maxsize=5000)
+        self.flow_queue: Queue[list] = Queue(maxsize=config.queue_size)
         self.dropped_flows = 0
         self.worker_errors = 0
+        self.processed_flows = 0
+        self.started_at = time.time()
         self.source_counts = Counter(self.repository.load_source_counts())
 
     def handle_terminated_flow(self, features: list) -> None:
@@ -38,17 +51,20 @@ class AppRuntime:
         except Full:
             with self.metrics_lock:
                 self.dropped_flows += 1
-            if self.dropped_flows % 100 == 1:
-                print(f"Warning: flow queue full, dropped {self.dropped_flows} terminated flows.")
+                dropped_count = self.dropped_flows
+            if dropped_count % 100 == 1:
+                self.logger.warning("Flow queue full, dropped %s terminated flows.", dropped_count)
             return
 
     def start_capture(self) -> None:
         with self.thread_lock:
             if self.worker_thread is None or not self.worker_thread.is_alive():
                 self.worker_thread = self.socketio.start_background_task(self._run_flow_worker)
+                self.logger.info("Worker thread started.")
             if self.capture_thread is not None and self.capture_thread.is_alive():
                 return
             self.capture_thread = self.socketio.start_background_task(self.capture.sniff_forever, self.thread_stop_event)
+            self.logger.info("Capture thread started.")
 
     def _run_flow_worker(self) -> None:
         while not self.thread_stop_event.is_set() or not self.flow_queue.empty():
@@ -62,7 +78,7 @@ class AppRuntime:
             except Exception:
                 with self.metrics_lock:
                     self.worker_errors += 1
-                traceback.print_exc()
+                self.logger.exception("Unhandled error while processing terminated flow.")
             finally:
                 self.flow_queue.task_done()
 
@@ -73,6 +89,8 @@ class AppRuntime:
 
         stored_record = self.repository.save_alert(record)
         self._register_source(stored_record.get("Src"))
+        with self.metrics_lock:
+            self.processed_flows += 1
         payload = self.inference.build_stream_payload(stored_record)
         self.socketio.emit(
             "newresult",
@@ -98,11 +116,19 @@ class AppRuntime:
         with self.metrics_lock:
             return {
                 "queue_size": self.flow_queue.qsize(),
+                "queue_capacity": self.config.queue_size,
                 "dropped_flows": self.dropped_flows,
                 "worker_errors": self.worker_errors,
+                "processed_flows": self.processed_flows,
                 "known_sources": len(self.source_counts),
+                "active_flows": len(self.capture.current_flows),
                 "capture_alive": bool(self.capture_thread and self.capture_thread.is_alive()),
                 "worker_alive": bool(self.worker_thread and self.worker_thread.is_alive()),
+                "uptime_seconds": int(time.time() - self.started_at),
+                "flow_timeout": self.config.flow_timeout,
+                "sniff_timeout": self.config.sniff_timeout,
+                "geolocation_enabled": self.config.enable_geolocation,
+                "explanations_enabled": self.config.enable_explanations,
             }
 
 
@@ -117,23 +143,48 @@ def _extract_filters(args: Dict[str, Any]) -> Dict[str, str]:
 
 def create_app() -> tuple[Flask, SocketIO]:
     project_root = Path(__file__).resolve().parent.parent
+    config = AppConfig.from_env(project_root)
+    logger = setup_logging(config.log_level, config.log_file)
     app = Flask(
         __name__,
         template_folder=str(project_root / "templates"),
         static_folder=str(project_root / "static"),
     )
-    app.config["SECRET_KEY"] = "secret!"
-    app.config["DEBUG"] = False
+    app.config["SECRET_KEY"] = config.secret_key
+    app.config["DEBUG"] = config.debug
 
-    socketio = SocketIO(app, async_mode=None, logger=False, engineio_logger=False)
-    repository = AlertRepository()
-    inference = InferenceService()
-    runtime = AppRuntime(socketio, repository, inference)
+    socketio = SocketIO(app, async_mode=None, logger=config.socketio_logging, engineio_logger=config.socketio_logging)
+    repository = AlertRepository(
+        db_path=config.db_path,
+        output_csv_path=config.output_csv_path,
+        input_csv_path=config.input_csv_path,
+        write_compatibility_logs=config.write_compatibility_logs,
+    )
+    if config.reset_data_on_start:
+        repository.reset_runtime_data(clear_csv_logs=True)
+    inference = InferenceService(
+        enable_geolocation=config.enable_geolocation,
+        enable_explanations=config.enable_explanations,
+        logger=logger.getChild("inference"),
+    )
+    runtime = AppRuntime(socketio, repository, inference, config, logger.getChild("runtime"))
     app.extensions["apt_runtime"] = runtime
+    app.extensions["apt_config"] = config
+    logger.info(
+        "Application initialized. DB=%s, queue_size=%s, reset_on_start=%s",
+        config.db_path,
+        config.queue_size,
+        config.reset_data_on_start,
+    )
 
     @app.route("/")
     def index():
+        runtime.start_capture()
         return render_template("index.html")
+
+    @app.route("/favicon.ico")
+    def favicon():
+        return send_from_directory(app.static_folder, "images/mlogo.png", mimetype="image/png")
 
     @app.route("/flow-detail")
     def flow_detail():
@@ -182,11 +233,11 @@ def create_app() -> tuple[Flask, SocketIO]:
 
     @socketio.on("connect", namespace="/test")
     def test_connect():
-        print("Client connected")
+        logger.info("Socket client connected.")
         runtime.start_capture()
 
     @socketio.on("disconnect", namespace="/test")
     def test_disconnect():
-        print("Client disconnected")
+        logger.info("Socket client disconnected.")
 
     return app, socketio
