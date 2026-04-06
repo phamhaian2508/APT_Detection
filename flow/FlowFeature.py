@@ -1,4 +1,53 @@
 class FlowFeatures:
+    __slots__ = (
+        "dest_port",
+        "flow_duration",
+        "bwd_packet_len_max",
+        "bwd_packet_len_min",
+        "bwd_packet_len_mean",
+        "bwd_packet_len_std",
+        "flow_IAT_mean",
+        "flow_IAT_std",
+        "flow_IAT_max",
+        "flow_IAT_min",
+        "fwd_IAT_total",
+        "fwd_IAT_mean",
+        "fwd_IAT_std",
+        "fwd_IAT_max",
+        "fwd_IAT_min",
+        "bwd_IAT_total",
+        "bwd_IAT_mean",
+        "bwd_IAT_std",
+        "bwd_IAT_max",
+        "bwd_IAT_min",
+        "fwd_PSH_flags",
+        "fwd_packets_s",
+        "max_packet_len",
+        "packet_len_mean",
+        "packet_len_std",
+        "packet_len_var",
+        "FIN_flag_count",
+        "SYN_flag_count",
+        "PSH_flag_count",
+        "ACK_flag_count",
+        "URG_flag_count",
+        "avg_packet_size",
+        "avg_bwd_segment_size",
+        "init_win_bytes_forward",
+        "init_win_bytes_backward",
+        "active_min",
+        "idle_mean",
+        "idle_std",
+        "idle_max",
+        "idle_min",
+        "src",
+        "dest",
+        "src_port",
+        "protocol",
+        "pid",
+        "p_name",
+    )
+
     def __init__(self):
         self.dest_port = 0
         self.flow_duration = 0
@@ -26,27 +75,24 @@ class FlowFeatures:
         self.bwd_IAT_min = 0
 
         self.fwd_PSH_flags = 0
-
         self.fwd_packets_s = 0
 
         self.max_packet_len = 0
-        self.packet_len_mean = 0#have: 74, want 66.5
-        self.packet_len_std = 0#have: 100, want 99.00183653
-        self.packet_len_var = 0#have: 10045, want 9801.363636
+        self.packet_len_mean = 0
+        self.packet_len_std = 0
+        self.packet_len_var = 0
 
-        self.FIN_flag_count = 0 #have 1, want 0
-        self.SYN_flag_count = 0 #have 1, want 0
-        self.PSH_flag_count = 0 #have 1 want 0
+        self.FIN_flag_count = 0
+        self.SYN_flag_count = 0
+        self.PSH_flag_count = 0
         self.ACK_flag_count = 0
         self.URG_flag_count = 0
 
-        self.avg_packet_size = 0#have: 74, want 72.54545455
-
+        self.avg_packet_size = 0
         self.avg_bwd_segment_size = 0
 
-        #default to -1
         self.init_win_bytes_forward = -1
-        self.init_win_bytes_backward = -1#have: 8192, want 2053
+        self.init_win_bytes_backward = -1
 
         self.active_min = 0
 
@@ -58,12 +104,13 @@ class FlowFeatures:
         self.src = ""
         self.dest = ""
         self.src_port = 0
-        # self.dest_port = 0
-        self.protocol = ''
-        self.timestamp = 0
+        self.protocol = ""
 
         self.pid = -1
-        self.p_name = 'Not found'
+        self.p_name = "Not found"
+
+    def _round_to_int(self, value):
+        return int(round(value))
 
     def getDestPort(self):
         return self.dest_port
@@ -75,7 +122,7 @@ class FlowFeatures:
         return self.flow_duration
 
     def setFlowDuration(self, value):
-        self.flow_duration = int(round(value))
+        self.flow_duration = self._round_to_int(value)
 
     def getBwdPacketLenMax(self):
         return self.bwd_packet_len_max
@@ -105,7 +152,7 @@ class FlowFeatures:
         return self.flow_IAT_mean
 
     def setFlowIATMean(self, value):
-        self.flow_IAT_mean = int(round(value))
+        self.flow_IAT_mean = self._round_to_int(value)
 
     def getFlowIATStd(self):
         return self.flow_IAT_std
@@ -117,19 +164,19 @@ class FlowFeatures:
         return self.flow_IAT_max
 
     def setFlowIATMax(self, value):
-        self.flow_IAT_max = int(round(value))
+        self.flow_IAT_max = self._round_to_int(value)
 
     def getFlowIATMin(self):
         return self.flow_IAT_min
 
     def setFlowIATMin(self, value):
-        self.flow_IAT_min = int(round(value))
+        self.flow_IAT_min = self._round_to_int(value)
 
     def getFwdIATTotal(self):
         return self.fwd_IAT_total
 
     def setFwdIATTotal(self, value):
-        self.fwd_IAT_total = int(round(value))
+        self.fwd_IAT_total = self._round_to_int(value)
 
     def getFwdIATMean(self):
         return self.fwd_IAT_mean
@@ -147,19 +194,19 @@ class FlowFeatures:
         return self.fwd_IAT_max
 
     def setFwdIATMax(self, value):
-        self.fwd_IAT_max = int(round(value))
+        self.fwd_IAT_max = self._round_to_int(value)
 
     def getFwdIATMin(self):
         return self.fwd_IAT_min
 
     def setFwdIATMin(self, value):
-        self.fwd_IAT_min = int(round(value))
+        self.fwd_IAT_min = self._round_to_int(value)
 
     def getBwdIATTotal(self):
         return self.bwd_IAT_total
 
     def setBwdIATTotal(self, value):
-        self.bwd_IAT_total = int(round(value))
+        self.bwd_IAT_total = self._round_to_int(value)
 
     def getBwdIATMean(self):
         return self.bwd_IAT_mean
@@ -177,13 +224,13 @@ class FlowFeatures:
         return self.bwd_IAT_max
 
     def setBwdIATMax(self, value):
-        self.bwd_IAT_max = int(round(value))
+        self.bwd_IAT_max = self._round_to_int(value)
 
     def getBwdIATMin(self):
         return self.bwd_IAT_min
 
     def setBwdIATMin(self, value):
-        self.bwd_IAT_min = int(round(value))
+        self.bwd_IAT_min = self._round_to_int(value)
 
     def getFwdPSHFlags(self):
         return self.fwd_PSH_flags
@@ -305,35 +352,26 @@ class FlowFeatures:
     def setIdleMin(self, value):
         self.idle_min = value
 
-    def getSrcIP(self):
-        return self.idle_min
-
-    def setIdleMin(self, value):
-        self.idle_min = value
-
-
-
     def getSrc(self):
         return self.src
-
-    def getDest(self):
-        return self.dest
-
-    def getSrcPort(self):
-        return self.src_port
-
-    def getProtocol(self):
-        return self.protocol
-
 
     def setSrc(self, value):
         self.src = value
 
+    def getDest(self):
+        return self.dest
+
     def setDest(self, value):
         self.dest = value
 
+    def getSrcPort(self):
+        return self.src_port
+
     def setSrcPort(self, value):
         self.src_port = value
+
+    def getProtocol(self):
+        return self.protocol
 
     def setProtocol(self, value):
         self.protocol = value
@@ -341,12 +379,11 @@ class FlowFeatures:
     def setPID(self, value):
         self.pid = value
 
-    def setPName(self, value):
-        self.p_name = value
-
     def getPID(self):
         return self.pid
 
+    def setPName(self, value):
+        self.p_name = value
+
     def getPName(self):
         return self.p_name
-

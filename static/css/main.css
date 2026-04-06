@@ -314,6 +314,56 @@ a {
     border-color: transparent;
 }
 
+.filter-panel {
+    margin-bottom: 16px;
+    padding: 16px 18px;
+    display: grid;
+    grid-template-columns: minmax(220px, 1.4fr) repeat(3, minmax(150px, 0.7fr)) auto;
+    gap: 12px;
+    align-items: end;
+    border: 1px solid rgba(74, 58, 41, 0.12);
+    border-radius: 18px;
+    background: rgba(255, 255, 255, 0.72);
+}
+
+.filter-field {
+    display: grid;
+    gap: 8px;
+}
+
+.filter-field label {
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+}
+
+.filter-field input,
+.filter-field select {
+    width: 100%;
+    min-height: 42px;
+    border: 1px solid rgba(16, 42, 67, 0.14);
+    border-radius: 12px;
+    padding: 0 14px;
+    background: rgba(255, 255, 255, 0.96);
+    color: var(--heading);
+    font: inherit;
+}
+
+.filter-field input:focus,
+.filter-field select:focus {
+    outline: 2px solid rgba(15, 108, 189, 0.18);
+    border-color: rgba(15, 108, 189, 0.38);
+}
+
+.filter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
 .priority-block {
     margin-bottom: 16px;
     padding: 18px;

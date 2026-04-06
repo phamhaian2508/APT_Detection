@@ -9,6 +9,7 @@ $(document).ready(function () {
     var maxRows = 40;
     var maxStoredRows = 200;
     var maxPriorityRows = 12;
+    var apiLimit = 200;
 
     function normalizeText(value) {
         return String(value || "")
@@ -18,18 +19,55 @@ $(document).ready(function () {
             .trim();
     }
 
+    function currentFilters() {
+        return {
+            q: $.trim($("#filter-query").val() || ""),
+            risk: $("#filter-risk").val() || "",
+            prediction: $("#filter-prediction").val() || "",
+            protocol: $("#filter-protocol").val() || ""
+        };
+    }
+
+    function hasActiveFilters() {
+        var filters = currentFilters();
+        return Boolean(filters.q || filters.risk || filters.prediction || filters.protocol);
+    }
+
+    function buildApiQuery(includeLimit) {
+        var filters = currentFilters();
+        var params = new URLSearchParams();
+
+        if (filters.q) {
+            params.set("q", filters.q);
+        }
+        if (filters.risk) {
+            params.set("risk", filters.risk);
+        }
+        if (filters.prediction) {
+            params.set("prediction", filters.prediction);
+        }
+        if (filters.protocol) {
+            params.set("protocol", filters.protocol);
+        }
+        if (includeLimit) {
+            params.set("limit", apiLimit);
+        }
+
+        return params.toString();
+    }
+
     function riskRank(risk) {
         var normalized = normalizeText(risk);
-        if (normalized.indexOf("rat cao") >= 0) {
+        if (normalized.indexOf("very high") >= 0 || normalized.indexOf("rat cao") >= 0) {
             return 4;
         }
-        if (normalized.indexOf("cao") >= 0) {
+        if (normalized === "high" || normalized.indexOf("cao") >= 0) {
             return 3;
         }
-        if (normalized.indexOf("trung binh") >= 0) {
+        if (normalized.indexOf("medium") >= 0 || normalized.indexOf("trung binh") >= 0) {
             return 2;
         }
-        if (normalized.indexOf("thap") >= 0 && normalized.indexOf("rat thap") === -1) {
+        if ((normalized === "low" || normalized.indexOf("thap") >= 0) && normalized.indexOf("rat thap") === -1) {
             return 1;
         }
         return 0;
@@ -69,7 +107,8 @@ $(document).ready(function () {
     }
 
     function isBenignPrediction(prediction) {
-        return normalizeText(prediction) === "luu luong hop le";
+        var normalized = normalizeText(prediction);
+        return normalized === "luu luong hop le" || normalized === "benign";
     }
 
     function isPriorityFlow(flow) {
@@ -85,6 +124,62 @@ $(document).ready(function () {
             return fallback;
         }
         return value;
+    }
+
+    function normalizeFlow(flow) {
+        return {
+            id: flow.id,
+            src: flow.src,
+            srcDisplay: flow.srcDisplay || flow.src,
+            srcPort: flow.srcPort,
+            dst: flow.dst,
+            dstDisplay: flow.dstDisplay || flow.dst,
+            dstPort: flow.dstPort,
+            protocol: flow.protocol,
+            start: flow.start,
+            lastSeen: flow.lastSeen,
+            appName: flow.appName,
+            pid: flow.pid,
+            prediction: flow.prediction,
+            probability: flow.probability,
+            risk: flow.risk
+        };
+    }
+
+    function flowMatchesFilters(flow) {
+        var filters = currentFilters();
+        var searchMatch = true;
+        var normalizedQuery = normalizeText(filters.q);
+
+        if (normalizedQuery) {
+            searchMatch = [
+                flow.src,
+                flow.dst,
+                flow.srcPort,
+                flow.dstPort,
+                flow.protocol,
+                flow.appName,
+                flow.pid,
+                flow.prediction,
+                flow.risk
+            ].some(function (value) {
+                return normalizeText(value).indexOf(normalizedQuery) >= 0;
+            });
+        }
+
+        if (!searchMatch) {
+            return false;
+        }
+        if (filters.risk && flow.risk !== filters.risk) {
+            return false;
+        }
+        if (filters.prediction && flow.prediction !== filters.prediction) {
+            return false;
+        }
+        if (filters.protocol && normalizeText(flow.protocol) !== normalizeText(filters.protocol)) {
+            return false;
+        }
+        return true;
     }
 
     function sortPriorityFlows() {
@@ -103,18 +198,9 @@ $(document).ready(function () {
         });
     }
 
-    function updatePriorityFlows(flow) {
-        if (!isPriorityFlow(flow)) {
-            return;
-        }
-
-        priorityFlows = priorityFlows.filter(function (item) {
-            return item.id !== flow.id;
-        });
-
-        priorityFlows.unshift(flow);
+    function rebuildPriorityFlows() {
+        priorityFlows = recentFlows.filter(isPriorityFlow);
         sortPriorityFlows();
-
         if (priorityFlows.length > maxPriorityRows) {
             priorityFlows = priorityFlows.slice(0, maxPriorityRows);
         }
@@ -132,7 +218,7 @@ $(document).ready(function () {
         if (priorityOnly) {
             return "Chưa có bản ghi ở mức rủi ro cần ưu tiên trong khung hiển thị hiện tại.";
         }
-        return "Chưa có dữ liệu lưu lượng trực tiếp. Hệ thống sẽ tự động hiển thị bản ghi mới ngay khi phát sinh kết nối mạng.";
+        return "Chưa có dữ liệu lưu lượng phù hợp với bộ lọc hiện tại.";
     }
 
     function renderMainTable() {
@@ -154,14 +240,14 @@ $(document).ready(function () {
         var appName = displayValue(flow.appName, "Chưa xác định");
         var pidLabel = displayValue(flow.pid, "Chưa xác định");
         var predictionClass = isBenignPrediction(flow.prediction) ? "is-benign" : "is-alert";
-        var priorityBadge = isPriorityFlow(flow) ? ' flow-row-priority' : "";
+        var priorityBadge = isPriorityFlow(flow) ? " flow-row-priority" : "";
         var row = "";
 
         row += '<tr class="' + priorityBadge.trim() + '">';
         row += "<td><strong>#" + flow.id + "</strong></td>";
-        row += "<td>" + flow.src + "</td>";
+        row += "<td>" + (flow.srcDisplay || flow.src) + "</td>";
         row += "<td>" + flow.srcPort + "</td>";
-        row += "<td>" + flow.dst + "</td>";
+        row += "<td>" + (flow.dstDisplay || flow.dst) + "</td>";
         row += "<td>" + flow.dstPort + "</td>";
         row += "<td>" + flow.protocol + "</td>";
         row += "<td>" + flow.start + "</td>";
@@ -199,8 +285,8 @@ $(document).ready(function () {
 
         row += '<tr class="flow-row-priority">';
         row += "<td><strong>#" + flow.id + "</strong></td>";
-        row += "<td>" + flow.src + "</td>";
-        row += "<td>" + flow.dst + "</td>";
+        row += "<td>" + (flow.srcDisplay || flow.src) + "</td>";
+        row += "<td>" + (flow.dstDisplay || flow.dst) + "</td>";
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + flow.prediction + "</span></td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
         row += '<td><span class="risk-pill ' + riskClass(flow.risk) + '">' + flow.risk + "</span></td>";
@@ -246,13 +332,16 @@ $(document).ready(function () {
 
         if (liveUpdatesPaused) {
             pauseButton.text("Tiếp tục cập nhật");
-            statusText.text("Bảng chính đang được giữ nguyên để thao tác. Có " + bufferedCount + " bản ghi mới chờ hiển thị.");
+            statusText.text("Bảng chính đang được giữ nguyên để thao tác. Có " + bufferedCount + " alert mới chờ hiển thị.");
+        } else if (hasActiveFilters()) {
+            pauseButton.text("Tạm dừng cập nhật bảng");
+            statusText.text("Dữ liệu lịch sử đang được đọc từ SQLite theo bộ lọc hiện tại.");
         } else if (priorityOnly) {
             pauseButton.text("Tạm dừng cập nhật bảng");
             statusText.text("Đang lọc riêng các bản ghi cần ưu tiên phân tích để thao tác nhanh hơn.");
         } else {
             pauseButton.text("Tạm dừng cập nhật bảng");
-            statusText.text("Bảng đang tự động cập nhật theo thời gian thực. Bạn có thể tạm dừng khi cần phân tích chi tiết.");
+            statusText.text("Bảng đang tự động cập nhật theo thời gian thực. Lịch sử alert được lưu trong SQLite để tìm kiếm và export.");
         }
 
         priorityButton.text(priorityOnly ? "Hiện toàn bộ bản ghi" : "Chỉ xem bản ghi cần ưu tiên");
@@ -260,28 +349,86 @@ $(document).ready(function () {
 
     function refreshDashboard() {
         renderMainTable();
+        renderPriorityTable();
         renderStats(latestIps);
         renderChart(latestIps);
         renderControls();
     }
 
+    function upsertFlow(flow) {
+        recentFlows = recentFlows.filter(function (item) {
+            return item.id !== flow.id;
+        });
+        recentFlows.unshift(flow);
+        if (recentFlows.length > maxStoredRows) {
+            recentFlows = recentFlows.slice(0, maxStoredRows);
+        }
+        rebuildPriorityFlows();
+    }
+
+    function loadHistory() {
+        var query = buildApiQuery(true);
+        var url = "/api/alerts";
+        if (query) {
+            url += "?" + query;
+        }
+
+        $.getJSON(url)
+            .done(function (response) {
+                recentFlows = (response.items || []).map(normalizeFlow);
+                latestIps = response.top_sources || [];
+                rebuildPriorityFlows();
+                bufferedCount = 0;
+                refreshDashboard();
+            })
+            .fail(function () {
+                $("#table-status").text("Không thể tải lịch sử alert từ database.");
+            });
+    }
+
+    function exportHistory() {
+        var query = buildApiQuery(false);
+        var url = "/api/alerts/export";
+        if (query) {
+            url += "?" + query;
+        }
+        window.open(url, "_blank");
+    }
+
     $("#toggle-live").on("click", function () {
         liveUpdatesPaused = !liveUpdatesPaused;
-
         if (!liveUpdatesPaused) {
-            bufferedCount = 0;
-            refreshDashboard();
-        } else {
-            renderControls();
+            loadHistory();
+            return;
         }
+        renderControls();
     });
 
     $("#toggle-priority").on("click", function () {
         priorityOnly = !priorityOnly;
-        if (!liveUpdatesPaused) {
-            refreshDashboard();
-        } else {
-            renderControls();
+        refreshDashboard();
+    });
+
+    $("#apply-filters").on("click", function () {
+        loadHistory();
+    });
+
+    $("#reset-filters").on("click", function () {
+        $("#filter-query").val("");
+        $("#filter-risk").val("");
+        $("#filter-prediction").val("");
+        $("#filter-protocol").val("");
+        loadHistory();
+    });
+
+    $("#export-filters").on("click", function () {
+        exportHistory();
+    });
+
+    $("#filter-query").on("keydown", function (event) {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            loadHistory();
         }
     });
 
@@ -327,32 +474,21 @@ $(document).ready(function () {
     });
 
     socket.on("newresult", function (msg) {
-        var result = msg.result || [];
-        var flow = {
-            id: result[0],
-            src: result[1],
-            srcPort: result[2],
-            dst: result[3],
-            dstPort: result[4],
-            protocol: result[5],
-            start: result[6],
-            lastSeen: result[7],
-            appName: result[8],
-            pid: result[9],
-            prediction: result[10],
-            probability: result[11],
-            risk: result[12]
-        };
+        var flow = normalizeFlow(msg.result || {});
 
-        latestIps = msg.ips || [];
-
-        recentFlows.unshift(flow);
-        if (recentFlows.length > maxStoredRows) {
-            recentFlows = recentFlows.slice(0, maxStoredRows);
+        if (!hasActiveFilters()) {
+            latestIps = msg.ips || [];
         }
 
-        updatePriorityFlows(flow);
-        renderPriorityTable();
+        if (hasActiveFilters() && !flowMatchesFilters(flow)) {
+            if (liveUpdatesPaused) {
+                bufferedCount += 1;
+            }
+            renderControls();
+            return;
+        }
+
+        upsertFlow(flow);
 
         if (liveUpdatesPaused) {
             bufferedCount += 1;
@@ -366,4 +502,5 @@ $(document).ready(function () {
     renderPriorityTable();
     renderControls();
     renderMainTable();
+    loadHistory();
 });

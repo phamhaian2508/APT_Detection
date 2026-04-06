@@ -1,5 +1,4 @@
 from scapy.layers.inet import IP, UDP, TCP
-import psutil
 
 
 flags = {
@@ -61,19 +60,6 @@ class PacketInfo:
         if p.haslayer(UDP):
             self.src_port = p.getlayer(UDP).sport
 
-        if self.pid is None and self.p_name == '':
-            connections = psutil.net_connections()
-            # port = int(sys.argv[1])
-            # print('-'*10)
-            # print(self.src_port)
-            # print(self.dest_port)
-            # print('-'*10)
-            for con in connections:
-                # print( psutil.Process(con.pid).name(),con.pid, con.laddr.port )
-                if (con.laddr.port - self.src_port ==0.0) or (con.laddr.port - self.dest_port ==0.0):
-                    self.pid = con.pid
-                    self.p_name = psutil.Process(con.pid).name()
-
 
     def getSrcPort(self):
         return self.src_port
@@ -84,12 +70,9 @@ class PacketInfo:
         if p.haslayer(UDP):
             self.dest_port = p.getlayer(UDP).dport
 
-        if self.pid is None and self.p_name == '':
-            connections = psutil.net_connections()
-            for con in connections:
-                if (con.laddr.port - self.src_port ==0.0) or (con.laddr.port - self.dest_port ==0.0):
-                    self.pid = con.pid
-                    self.p_name = psutil.Process(con.pid).name()
+    def setProcess(self, pid, process_name):
+        self.pid = pid
+        self.p_name = process_name or ''
 
     def getPID(self):
         return self.pid

@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta http-equiv="Content-Type" content="text/html;charset=utf8">
+    <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex, nofollow">
     <title>Hệ Thống Giám Sát APT Detection</title>
@@ -119,6 +119,51 @@
                 <div class="table-toolbar-actions">
                     <button id="toggle-live" class="toolbar-button" type="button">Tạm dừng cập nhật bảng</button>
                     <button id="toggle-priority" class="toolbar-button" type="button">Chỉ xem bản ghi cần ưu tiên</button>
+                </div>
+            </div>
+
+            <div class="filter-panel">
+                <div class="filter-field filter-search">
+                    <label for="filter-query">Tìm kiếm</label>
+                    <input id="filter-query" type="text" placeholder="IP, port, protocol, app, prediction...">
+                </div>
+                <div class="filter-field">
+                    <label for="filter-risk">Mức rủi ro</label>
+                    <select id="filter-risk">
+                        <option value="">Tất cả</option>
+                        <option value="Rất cao">Rất cao</option>
+                        <option value="Cao">Cao</option>
+                        <option value="Trung bình">Trung bình</option>
+                        <option value="Thấp">Thấp</option>
+                        <option value="Rất thấp">Rất thấp</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-prediction">Loại cảnh báo</label>
+                    <select id="filter-prediction">
+                        <option value="">Tất cả</option>
+                        <option value="Lưu lượng hợp lệ">Lưu lượng hợp lệ</option>
+                        <option value="Lưu lượng botnet">Lưu lượng botnet</option>
+                        <option value="Tấn công DDoS">Tấn công DDoS</option>
+                        <option value="Tấn công DoS">Tấn công DoS</option>
+                        <option value="Tấn công dò quét FTP">Tấn công dò quét FTP</option>
+                        <option value="Dò quét thăm dò">Dò quét thăm dò</option>
+                        <option value="Tấn công dò quét SSH">Tấn công dò quét SSH</option>
+                        <option value="Tấn công ứng dụng web">Tấn công ứng dụng web</option>
+                    </select>
+                </div>
+                <div class="filter-field">
+                    <label for="filter-protocol">Protocol</label>
+                    <select id="filter-protocol">
+                        <option value="">Tất cả</option>
+                        <option value="TCP">TCP</option>
+                        <option value="UDP">UDP</option>
+                    </select>
+                </div>
+                <div class="filter-actions">
+                    <button id="apply-filters" class="toolbar-button" type="button">Áp dụng</button>
+                    <button id="reset-filters" class="toolbar-button" type="button">Bỏ lọc</button>
+                    <button id="export-filters" class="toolbar-button" type="button">Export CSV</button>
                 </div>
             </div>
 
