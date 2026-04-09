@@ -129,6 +129,16 @@ PREDICTION_LABELS = {
     "Web Attack": "Tấn công ứng dụng web",
 }
 
+# Visible alert categories in the dashboard filter.
+DEMO_FILTER_PREDICTION_KEYS = [
+    "Benign",
+    "DDoS",
+    "DoS",
+    "FTP-Patator",
+    "Probe",
+    "SSH-Patator",
+]
+
 PREDICTION_ALIASES = {
     "Luu luong hop le": "Lưu lượng hợp lệ",
     "LÆ°u lÆ°á»£ng há»£p lá»‡": "Lưu lượng hợp lệ",
@@ -238,6 +248,14 @@ def risk_css_class(label: str) -> str:
     return RISK_CLASSES.get(translate_risk_label(label), "risk-minimal")
 
 
+def is_priority_alert(prediction_label: str, risk_label: str) -> bool:
+    normalized_prediction = translate_prediction_label(prediction_label)
+    benign_prediction = translate_prediction_label("Benign")
+    if normalized_prediction != benign_prediction:
+        return True
+    return risk_rank(risk_label) > 2
+
+
 def prediction_filter_values(label: str) -> List[str]:
     normalized = translate_prediction_label(label)
     values = {label, normalized}
@@ -245,6 +263,10 @@ def prediction_filter_values(label: str) -> List[str]:
         if canonical == normalized:
             values.add(alias)
     return [value for value in values if value]
+
+
+def demo_prediction_filter_labels() -> List[str]:
+    return [translate_prediction_label(label) for label in DEMO_FILTER_PREDICTION_KEYS]
 
 
 def risk_filter_values(label: str) -> List[str]:

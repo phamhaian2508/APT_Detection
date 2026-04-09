@@ -24,6 +24,7 @@ from backend.features import (
     DISPLAY_LABELS,
     build_alert_record,
     feature_vector_from_record,
+    is_priority_alert,
     risk_css_class,
     risk_label_from_probability,
     translate_prediction_label,
@@ -155,6 +156,7 @@ class InferenceService:
             "prediction": prediction,
             "probability": record["Probability"],
             "risk": risk,
+            "isPriority": is_priority_alert(prediction, risk),
             "isProvisional": False,
         }
 

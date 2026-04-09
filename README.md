@@ -36,4 +36,16 @@ Run program:
 
 Web app address: [http://localhost:5000](http://localhost:5000)
 
+## Visible alert types
+The dashboard filter currently shows these categories:
+
+* `Lưu lượng hợp lệ`
+* `Tấn công DDoS`
+* `Tấn công DoS`
+* `Tấn công dò quét FTP`
+* `Dò quét thăm dò`
+* `Tấn công dò quét SSH`
+
+The trained model also still contains `Botnet` and `Web Attack`, but those categories remain hidden from the filter for now because they usually need a more specialized lab to reproduce and validate consistently.
+
 

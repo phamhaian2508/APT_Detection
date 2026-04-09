@@ -14,6 +14,7 @@ from flask_socketio import SocketIO
 
 from backend.config import AppConfig
 from backend.capture import CaptureService
+from backend.features import demo_prediction_filter_labels
 from backend.inference import InferenceService
 from backend.logging_utils import setup_logging
 from backend.storage import AlertRepository
@@ -180,7 +181,10 @@ def create_app() -> tuple[Flask, SocketIO]:
     @app.route("/")
     def index():
         runtime.start_capture()
-        return render_template("index.html")
+        return render_template(
+            "index.html",
+            prediction_filter_options=demo_prediction_filter_labels(),
+        )
 
     @app.route("/favicon.ico")
     def favicon():
