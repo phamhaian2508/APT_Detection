@@ -9,6 +9,7 @@ $(document).ready(function () {
     var bufferedCount = 0;
     var socketConnected = false;
     var runtimePollHandle = null;
+    var filterInputDebounceHandle = null;
     var maxRows = 40;
     var maxStoredRows = 200;
     var maxPriorityRows = 12;
@@ -112,7 +113,11 @@ $(document).ready(function () {
         if (Number.isNaN(parsed)) {
             return value || "-";
         }
-        return (parsed * 100).toFixed(1) + "%";
+        var percentage = Math.max(0, parsed * 100);
+        if (percentage >= 100) {
+            return "99.99%";
+        }
+        return percentage.toFixed(2) + "%";
     }
 
     function isBenignPrediction(prediction) {
@@ -121,7 +126,10 @@ $(document).ready(function () {
     }
 
     function isPriorityFlow(flow) {
-        return riskRank(flow.risk) >= 2;
+        if (flow && typeof flow.isPriority === "boolean") {
+            return flow.isPriority;
+        }
+        return !isBenignPrediction(flow.prediction) || riskRank(flow.risk) > 2;
     }
 
     function isHighRiskFlow(flow) {
@@ -151,7 +159,8 @@ $(document).ready(function () {
             pid: flow.pid,
             prediction: flow.prediction,
             probability: flow.probability,
-            risk: flow.risk
+            risk: flow.risk,
+            isPriority: Boolean(flow.isPriority)
         };
     }
 
@@ -230,14 +239,14 @@ $(document).ready(function () {
 
     function tableEmptyMessage() {
         if (priorityOnly) {
-            return "Chua co ban ghi uu tien trong khung hien thi hien tai.";
+            return "Chưa có bản ghi ưu tiên trong khung hiển thị hiện tại.";
         }
-        return "Chua co du lieu luu luong phu hop voi bo loc hien tai.";
+        return "Chưa có dữ liệu lưu lượng phù hợp với bộ lọc hiện tại.";
     }
 
     function renderMainRow(flow) {
-        var appName = displayValue(flow.appName, "Chua xac dinh");
-        var pidLabel = displayValue(flow.pid, "Chua xac dinh");
+        var appName = displayValue(flow.appName, "Chưa xác định");
+        var pidLabel = displayValue(flow.pid, "Chưa xác định");
         var predictionClass = isBenignPrediction(flow.prediction) ? "is-benign" : "is-alert";
         var rowClass = isPriorityFlow(flow) ? "flow-row-priority" : "";
         var row = "";
@@ -256,7 +265,7 @@ $(document).ready(function () {
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + displayValue(flow.prediction, "-") + "</span></td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
         row += '<td><span class="risk-pill ' + riskClass(flow.risk) + '">' + displayValue(flow.risk, "-") + "</span></td>";
-        row += '<td><a class="action-link" href="/flow-detail?flow_id=' + flow.id + '">Phan tich</a></td>';
+        row += '<td><a class="action-link" href="/flow-detail?flow_id=' + flow.id + '">Phân tích</a></td>';
         row += "</tr>";
 
         return row;
@@ -288,7 +297,7 @@ $(document).ready(function () {
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + flow.prediction + "</span></td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
         row += '<td><span class="risk-pill ' + riskClass(flow.risk) + '">' + flow.risk + "</span></td>";
-        row += '<td><a class="action-link" href="/flow-detail?flow_id=' + flow.id + '">Phan tich</a></td>';
+        row += '<td><a class="action-link" href="/flow-detail?flow_id=' + flow.id + '">Phân tích</a></td>';
         row += "</tr>";
 
         return row;
@@ -299,7 +308,7 @@ $(document).ready(function () {
         var tableBody = "";
 
         if (!flows.length) {
-            tableBody = '<tr><td colspan="7" class="empty-state">Chua co ban ghi can uu tien phan tich.</td></tr>';
+            tableBody = '<tr><td colspan="7" class="empty-state">Chưa có bản ghi cần ưu tiên phân tích.</td></tr>';
         } else {
             for (var index = 0; index < flows.length; index += 1) {
                 tableBody += renderPriorityRow(flows[index]);
@@ -373,8 +382,8 @@ $(document).ready(function () {
 
     function renderRuntimeStatus() {
         if (!runtimeState) {
-            $("#runtime-socket").text(socketConnected ? "Da ket noi" : "Dang kiem tra");
-            $("#runtime-socket-note").text(socketConnected ? "Kenh realtime da san sang." : "Dang cho ket noi websocket.");
+            $("#runtime-socket").text(socketConnected ? "Đã kết nối" : "Đang kiểm tra");
+            $("#runtime-socket-note").text(socketConnected ? "Kênh realtime đã sẵn sàng." : "Đang chờ kết nối WebSocket.");
             return;
         }
 
@@ -383,45 +392,45 @@ $(document).ready(function () {
         var queueSize = Number(runtimeState.queue_size || 0);
         var queueCapacity = Number(runtimeState.queue_capacity || 0);
         var queueRatio = queueCapacity > 0 ? queueSize / queueCapacity : 0;
-        var queueNote = "Hang doi dang nhe.";
-        var heroText = "He thong dang on dinh va san sang ghi nhan alert moi.";
+        var queueNote = "Hàng đợi đang nhẹ.";
+        var heroText = "Hệ thống đang ổn định và sẵn sàng ghi nhận alert mới.";
         var heroLevel = "ok";
 
         if (queueRatio >= 0.8) {
-            queueNote = "Hang doi dang cao, nen kiem tra toc do xu ly.";
-            heroText = "Hang doi dang tang cao, can theo doi them worker va capture.";
+            queueNote = "Hàng đợi đang cao, nên kiểm tra tốc độ xử lý.";
+            heroText = "Hàng đợi đang tăng cao, cần theo dõi thêm worker và capture.";
             heroLevel = "warning";
         }
         if (!captureHealthy || !workerHealthy) {
-            heroText = "Mot thanh phan runtime dang gap van de, can kiem tra ngay.";
+            heroText = "Một thành phần runtime đang gặp vấn đề, cần kiểm tra ngay.";
             heroLevel = "danger";
         }
         if (!socketConnected) {
-            heroText = "Websocket dang mat ket noi, giao dien se khong nhan alert realtime.";
+            heroText = "WebSocket đang mất kết nối, giao diện sẽ không nhận alert realtime.";
             heroLevel = "warning";
         }
         if (Number(runtimeState.worker_errors || 0) > 0) {
-            heroText = "Worker da ghi nhan loi. Nen xem log de xac dinh nguyen nhan.";
+            heroText = "Worker đã ghi nhận lỗi. Nên xem log để xác định nguyên nhân.";
             heroLevel = "danger";
         }
 
         setHeroStatus(heroText, heroLevel);
 
-        $("#runtime-socket").text(socketConnected ? "Da ket noi" : "Mat ket noi");
-        $("#runtime-socket-note").text(socketConnected ? "Kenh realtime dang nhan alert moi." : "Dashboard dang cho ket noi lai websocket.");
+        $("#runtime-socket").text(socketConnected ? "Đã kết nối" : "Mất kết nối");
+        $("#runtime-socket-note").text(socketConnected ? "Kênh realtime đang nhận alert mới." : "Dashboard đang chờ kết nối lại WebSocket.");
 
-        $("#runtime-capture").text(captureHealthy ? "Dang chay" : "Khong hoat dong");
+        $("#runtime-capture").text(captureHealthy ? "Đang chạy" : "Không hoạt động");
         $("#runtime-capture-note").text(
             captureHealthy
-                ? "Capture dang theo doi luong mang, timeout flow " + runtimeState.flow_timeout + "s."
-                : "Capture thread khong hoat dong. Kiem tra quyen sniff va log runtime."
+                ? "Capture đang theo dõi luồng mạng, timeout flow " + runtimeState.flow_timeout + "s."
+                : "Capture thread không hoạt động. Kiểm tra quyền sniff và log runtime."
         );
 
-        $("#runtime-worker").text(workerHealthy ? "Dang chay" : "Khong hoat dong");
+        $("#runtime-worker").text(workerHealthy ? "Đang chạy" : "Không hoạt động");
         $("#runtime-worker-note").text(
             workerHealthy
-                ? "Worker dang xu ly flow va ghi alert vao storage."
-                : "Worker thread khong hoat dong. Kiem tra queue va log backend."
+                ? "Worker đang xử lý flow và ghi alert vào storage."
+                : "Worker thread không hoạt động. Kiểm tra queue và log backend."
         );
 
         $("#runtime-queue").text(queueSize + " / " + queueCapacity);
@@ -432,12 +441,12 @@ $(document).ready(function () {
         $("#runtime-dropped-flows").text(runtimeState.dropped_flows || 0);
         $("#runtime-worker-errors").text(runtimeState.worker_errors || 0);
         $("#runtime-uptime").text(formatUptime(runtimeState.uptime_seconds));
-        $("#runtime-geolocation").text("GeoIP: " + (runtimeState.geolocation_enabled ? "bat" : "tat"));
-        $("#runtime-explanations").text("LIME: " + (runtimeState.explanations_enabled ? "bat" : "tat"));
+        $("#runtime-geolocation").text("GeoIP: " + (runtimeState.geolocation_enabled ? "bật" : "tắt"));
+        $("#runtime-explanations").text("LIME: " + (runtimeState.explanations_enabled ? "bật" : "tắt"));
     }
 
     function runtimeFailureMessage() {
-        return "Khong the doc trang thai runtime.";
+        return "Không thể đọc trạng thái runtime.";
     }
 
     function renderControls() {
@@ -449,20 +458,20 @@ $(document).ready(function () {
         priorityButton.toggleClass("is-active", priorityOnly);
 
         if (liveUpdatesPaused) {
-            pauseButton.text("Tiep tuc cap nhat");
-            statusText.text("Bang chinh dang duoc giu nguyen de thao tac. Co " + bufferedCount + " ban cap nhat moi cho hien thi.");
+            pauseButton.text("Tiếp tục cập nhật");
+            statusText.text("Bảng chính đang được giữ nguyên để thao tác. Có " + bufferedCount + " bản cập nhật mới chờ hiển thị.");
         } else if (hasActiveFilters()) {
-            pauseButton.text("Tam dung cap nhat bang");
-            statusText.text("Du lieu lich su dang duoc doc tu SQLite theo bo loc hien tai.");
+            pauseButton.text("Tạm dừng cập nhật bảng");
+            statusText.text("Dữ liệu lịch sử đang được đọc từ SQLite theo bộ lọc hiện tại.");
         } else if (priorityOnly) {
-            pauseButton.text("Tam dung cap nhat bang");
-            statusText.text("Dang loc rieng cac ban ghi can uu tien phan tich.");
+            pauseButton.text("Tạm dừng cập nhật bảng");
+            statusText.text("Đang lọc riêng các bản ghi cần ưu tiên phân tích.");
         } else {
-            pauseButton.text("Tam dung cap nhat bang");
-            statusText.text("Bang dang tu dong cap nhat theo thoi gian thuc.");
+            pauseButton.text("Tạm dừng cập nhật bảng");
+            statusText.text("Bảng đang tự động cập nhật theo thời gian thực.");
         }
 
-        priorityButton.text(priorityOnly ? "Hien toan bo ban ghi" : "Chi xem ban ghi can uu tien");
+        priorityButton.text(priorityOnly ? "Hiện toàn bộ bản ghi" : "Chỉ xem bản ghi cần ưu tiên");
     }
 
     function refreshDashboard() {
@@ -501,8 +510,17 @@ $(document).ready(function () {
                 refreshDashboard();
             })
             .fail(function () {
-                $("#table-status").text("Khong the tai lich su alert tu database.");
+                $("#table-status").text("Không thể tải lịch sử alert từ database.");
             });
+    }
+
+    function scheduleHistoryReload() {
+        if (filterInputDebounceHandle) {
+            window.clearTimeout(filterInputDebounceHandle);
+        }
+        filterInputDebounceHandle = window.setTimeout(function () {
+            loadHistory();
+        }, 250);
     }
 
     function loadRuntimeStatus() {
@@ -514,9 +532,9 @@ $(document).ready(function () {
             })
             .fail(function () {
                 runtimeState = null;
-                $("#runtime-capture").text("Khong ro");
-                $("#runtime-worker").text("Khong ro");
-                $("#runtime-queue").text("Khong ro");
+                $("#runtime-capture").text("Không rõ");
+                $("#runtime-worker").text("Không rõ");
+                $("#runtime-queue").text("Không rõ");
                 $("#runtime-capture-note").text(runtimeFailureMessage());
                 $("#runtime-worker-note").text(runtimeFailureMessage());
                 $("#runtime-queue-note").text(runtimeFailureMessage());
@@ -547,15 +565,15 @@ $(document).ready(function () {
         refreshDashboard();
     });
 
-    $("#apply-filters").on("click", function () {
-        loadHistory();
-    });
-
     $("#reset-filters").on("click", function () {
         $("#filter-query").val("");
         $("#filter-risk").val("");
         $("#filter-prediction").val("");
         $("#filter-protocol").val("");
+        if (filterInputDebounceHandle) {
+            window.clearTimeout(filterInputDebounceHandle);
+            filterInputDebounceHandle = null;
+        }
         loadHistory();
     });
 
@@ -563,9 +581,21 @@ $(document).ready(function () {
         exportHistory();
     });
 
+    $("#filter-risk, #filter-prediction, #filter-protocol").on("change", function () {
+        loadHistory();
+    });
+
+    $("#filter-query").on("input", function () {
+        scheduleHistoryReload();
+    });
+
     $("#filter-query").on("keydown", function (event) {
         if (event.key === "Enter") {
             event.preventDefault();
+            if (filterInputDebounceHandle) {
+                window.clearTimeout(filterInputDebounceHandle);
+                filterInputDebounceHandle = null;
+            }
             loadHistory();
         }
     });
@@ -659,6 +689,9 @@ $(document).ready(function () {
     runtimePollHandle = window.setInterval(loadRuntimeStatus, 5000);
 
     $(window).on("beforeunload", function () {
+        if (filterInputDebounceHandle) {
+            window.clearTimeout(filterInputDebounceHandle);
+        }
         if (runtimePollHandle) {
             window.clearInterval(runtimePollHandle);
         }

@@ -217,14 +217,9 @@
                     <label for="filter-prediction">Loại cảnh báo</label>
                     <select id="filter-prediction">
                         <option value="">Tất cả</option>
-                        <option value="Lưu lượng hợp lệ">Lưu lượng hợp lệ</option>
-                        <option value="Lưu lượng botnet">Lưu lượng botnet</option>
-                        <option value="Tấn công DDoS">Tấn công DDoS</option>
-                        <option value="Tấn công DoS">Tấn công DoS</option>
-                        <option value="Tấn công dò quét FTP">Tấn công dò quét FTP</option>
-                        <option value="Dò quét thăm dò">Dò quét thăm dò</option>
-                        <option value="Tấn công dò quét SSH">Tấn công dò quét SSH</option>
-                        <option value="Tấn công ứng dụng web">Tấn công ứng dụng web</option>
+                        {% for prediction_label in prediction_filter_options %}
+                        <option value="{{ prediction_label }}">{{ prediction_label }}</option>
+                        {% endfor %}
                     </select>
                 </div>
                 <div class="filter-field">
@@ -236,7 +231,6 @@
                     </select>
                 </div>
                 <div class="filter-actions">
-                    <button id="apply-filters" class="toolbar-button" type="button">Áp dụng</button>
                     <button id="reset-filters" class="toolbar-button" type="button">Bỏ lọc</button>
                     <button id="export-filters" class="toolbar-button" type="button">Export CSV</button>
                 </div>
@@ -248,7 +242,7 @@
                         <p class="panel-kicker">Hàng chờ ưu tiên</p>
                         <h3>Bản ghi cần phân tích ngay</h3>
                     </div>
-                    <p class="panel-note">Hệ thống giữ lại tối đa <strong id="priority-count">0</strong> bản ghi từ mức Trung bình trở lên để bạn thao tác thuận tiện hơn.</p>
+                    <p class="panel-note">Hệ thống giữ lại tối đa <strong id="priority-count">0</strong> bản ghi có dự đoán khác Lưu lượng hợp lệ hoặc có mức rủi ro cao hơn Trung bình để bạn ưu tiên phân tích.</p>
                 </div>
 
                 <div class="table-wrap priority-table-wrap">
@@ -267,7 +261,7 @@
                         <tbody>
                             <tr>
                                 <td colspan="7" class="empty-state">
-                                    Chưa có bản ghi cần ưu tiên phân tích. Các bản ghi từ mức Trung bình trở lên sẽ được giữ lại tại đây.
+                                    Chưa có bản ghi cần ưu tiên phân tích. Hàng chờ này giữ các bản ghi có dự đoán khác Lưu lượng hợp lệ hoặc có rủi ro Cao, Rất cao.
                                 </td>
                             </tr>
                         </tbody>
