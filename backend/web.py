@@ -172,11 +172,15 @@ def create_app() -> tuple[Flask, SocketIO]:
     app.extensions["apt_runtime"] = runtime
     app.extensions["apt_config"] = config
     logger.info(
-        "Application initialized. DB=%s, queue_size=%s, reset_on_start=%s",
+        "Application initialized. DB=%s, queue_size=%s, reset_on_start=%s, auto_start_capture=%s",
         config.db_path,
         config.queue_size,
         config.reset_data_on_start,
+        config.auto_start_capture,
     )
+    if config.auto_start_capture:
+        runtime.start_capture()
+        logger.info("Capture auto-start is enabled.")
 
     @app.route("/")
     def index():
