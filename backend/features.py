@@ -248,6 +248,17 @@ def risk_css_class(label: str) -> str:
     return RISK_CLASSES.get(translate_risk_label(label), "risk-minimal")
 
 
+def build_risk_summary_html(label: str) -> str:
+    translated_label = translate_risk_label(label)
+    css_class = risk_css_class(translated_label)
+    return (
+        f'<div class="risk-summary {css_class}">'
+        f'<span class="risk-label">Mức rủi ro</span>'
+        f'<span class="risk-pill {css_class}">{translated_label}</span>'
+        f"</div>"
+    )
+
+
 def is_priority_alert(prediction_label: str, risk_label: str) -> bool:
     normalized_prediction = translate_prediction_label(prediction_label)
     benign_prediction = translate_prediction_label("Benign")
