@@ -30,6 +30,7 @@ from backend.features import (
     translate_prediction_label,
     translate_risk_label,
 )
+from backend.ssh_heuristics import SSHBruteForceHeuristic
 
 
 class GeoResolver:
@@ -95,6 +96,7 @@ class InferenceService:
         self._predict_lock = Lock()
         self.logger = logger or logging.getLogger("apt_detection.inference")
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
+        self.ssh_heuristic = SSHBruteForceHeuristic()
         self.ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
         self.ae_model = keras.models.load_model("models/autoencoder_39ft.hdf5")
         with open("models/model.pkl", "rb") as model_file:
@@ -126,8 +128,15 @@ class InferenceService:
         risk_probability = float(np.sum(probabilities[1:])) if len(probabilities) > 1 else 0.0
         risk_label = translate_risk_label(risk_label_from_probability(risk_probability))
         classification = translate_prediction_label(prediction)
+        record = build_alert_record(features, classification, probability_score, risk_label)
 
-        return build_alert_record(features, classification, probability_score, risk_label)
+        heuristic_match = self.ssh_heuristic.evaluate(record, classification)
+        if heuristic_match is not None:
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
+        return record
 
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
         prediction = translate_prediction_label(record["Classification"])
