@@ -22,14 +22,15 @@ from tensorflow import keras
 from backend.features import (
     AE_FEATURES,
     DISPLAY_LABELS,
+    build_risk_summary_html,
     build_alert_record,
     feature_vector_from_record,
     is_priority_alert,
-    risk_css_class,
     risk_label_from_probability,
     translate_prediction_label,
     translate_risk_label,
 )
+from backend.ftp_heuristics import FTPBruteForceHeuristic
 from backend.ssh_heuristics import SSHBruteForceHeuristic
 
 
@@ -96,6 +97,7 @@ class InferenceService:
         self._predict_lock = Lock()
         self.logger = logger or logging.getLogger("apt_detection.inference")
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
+        self.ftp_heuristic = FTPBruteForceHeuristic()
         self.ssh_heuristic = SSHBruteForceHeuristic()
         self.ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
         self.ae_model = keras.models.load_model("models/autoencoder_39ft.hdf5")
@@ -136,6 +138,12 @@ class InferenceService:
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk
 
+        heuristic_match = self.ftp_heuristic.evaluate(record, str(record["Classification"]))
+        if heuristic_match is not None:
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
         return record
 
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -171,18 +179,7 @@ class InferenceService:
 
     def build_detail_context(self, record: Dict[str, Any]) -> Dict[str, Any]:
         feature_vector = feature_vector_from_record(record)
-        with self._predict_lock:
-            probabilities = self.classifier.predict_proba([feature_vector]).astype(float)[0]
-
-        risk_probability = float(np.sum(probabilities[1:])) if len(probabilities) > 1 else 0.0
-        risk_label = translate_risk_label(risk_label_from_probability(risk_probability))
-        risk_class = risk_css_class(risk_label)
-        risk_html = (
-            f'<div class="risk-summary {risk_class}">'
-            f'<span class="risk-label">Mức rủi ro</span>'
-            f'<span class="risk-pill {risk_class}">{risk_label}</span>'
-            f"</div>"
-        )
+        risk_html = build_risk_summary_html(str(record.get("Risk") or "Minimal"))
 
         exp_html = None
         if self.explainer is not None:
