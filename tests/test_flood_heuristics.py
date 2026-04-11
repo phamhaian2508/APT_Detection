@@ -165,6 +165,70 @@ class FloodHeuristicTests(unittest.TestCase):
         self.assertIsNotNone(match)
         self.assertEqual(match.classification, translate_prediction_label("DDoS"))
 
+    def test_existing_dos_predictions_are_raised_to_medium_when_many_sources_hit_one_target(self):
+        detector = FloodAttackHeuristic(
+            window_seconds=30,
+            dos_event_threshold=12,
+            ddos_event_threshold=12,
+            ddos_unique_sources_threshold=10,
+        )
+        prediction = translate_prediction_label("DoS")
+
+        match = None
+        for index in range(6):
+            match = detector.evaluate(
+                build_record(
+                    Src=f"10.10.0.{index + 1}",
+                    Dest="192.168.186.134",
+                    DestPort=80,
+                    Protocol="TCP",
+                    SYNFlagCount=2,
+                    ACKFlagCount=0,
+                    FlowDuration=900_000,
+                    FwdPackets_s=180,
+                    FlowStartTime=f"2026-04-10 10:08:0{index}",
+                    FlowLastSeen=f"2026-04-10 10:08:0{index}",
+                ),
+                prediction,
+            )
+
+        self.assertIsNotNone(match)
+        self.assertEqual(match.classification, translate_prediction_label("DoS"))
+        self.assertEqual(risk_rank(match.risk), risk_rank("Medium"))
+        self.assertGreaterEqual(match.unique_sources, 3)
+
+    def test_existing_dos_predictions_are_raised_to_high_when_target_pressure_becomes_extreme(self):
+        detector = FloodAttackHeuristic(
+            window_seconds=30,
+            dos_event_threshold=20,
+            ddos_event_threshold=20,
+            ddos_unique_sources_threshold=20,
+        )
+        prediction = translate_prediction_label("DoS")
+
+        match = None
+        for index in range(10):
+            match = detector.evaluate(
+                build_record(
+                    Src=f"10.20.0.{index + 1}",
+                    Dest="192.168.186.134",
+                    DestPort=80,
+                    Protocol="TCP",
+                    SYNFlagCount=2,
+                    ACKFlagCount=0,
+                    FlowDuration=900_000,
+                    FwdPackets_s=180,
+                    FlowStartTime=f"2026-04-10 10:09:{index:02d}",
+                    FlowLastSeen=f"2026-04-10 10:09:{index:02d}",
+                ),
+                prediction,
+            )
+
+        self.assertIsNotNone(match)
+        self.assertEqual(match.classification, translate_prediction_label("DoS"))
+        self.assertEqual(risk_rank(match.risk), risk_rank("High"))
+        self.assertGreaterEqual(match.unique_sources, 6)
+
     def test_icmp_microflows_from_many_sources_are_promoted_to_ddos(self):
         detector = FloodAttackHeuristic(window_seconds=30, ddos_event_threshold=4, ddos_unique_sources_threshold=3)
         prediction = translate_prediction_label("Benign")

@@ -32,7 +32,7 @@
 
 Run program:
 
-<code>python application.py</code>
+<codeếu </code>
 
 Web app address: [http://localhost:5000](http://localhost:5000)
 
