@@ -1,4 +1,4 @@
-from scapy.layers.inet import IP, UDP, TCP
+from scapy.layers.inet import ICMP, IP, TCP, UDP
 
 
 flags = {
@@ -86,8 +86,10 @@ class PacketInfo:
     def setProtocol(self, p):
         if p.haslayer(TCP):
             self.protocol = 'TCP'
-        if p.haslayer(UDP):
+        elif p.haslayer(UDP):
             self.protocol = 'UDP'
+        elif p.haslayer(ICMP):
+            self.protocol = 'ICMP'
 
     def getProtocol(self):
         return self.protocol
@@ -161,8 +163,10 @@ class PacketInfo:
     def setPayloadBytes(self, p):
         if p.haslayer(TCP):
             self.payload_bytes = len(p[TCP].payload)
-        if p.haslayer(UDP):
+        elif p.haslayer(UDP):
             self.payload_bytes = len(p[UDP].payload)
+        elif p.haslayer(ICMP):
+            self.payload_bytes = len(p[ICMP].payload)
 
     def getPayloadBytes(self):
         return self.payload_bytes
@@ -170,8 +174,10 @@ class PacketInfo:
     def setHeaderBytes(self, p):
         if p.haslayer(TCP):
             self.header_bytes = len(p[TCP]) - len(p[TCP].payload)
-        if p.haslayer(UDP):
+        elif p.haslayer(UDP):
             self.header_bytes = len(p[UDP]) - len(p[UDP].payload)
+        elif p.haslayer(ICMP):
+            self.header_bytes = len(p[ICMP]) - len(p[ICMP].payload)
 
     def getHeaderBytes(self):
         return self.header_bytes
@@ -179,8 +185,10 @@ class PacketInfo:
     def setPacketSize(self, p):
         if p.haslayer(TCP):
             self.packet_size = len(p[TCP])
-        if p.haslayer(UDP):
+        elif p.haslayer(UDP):
             self.packet_size = len(p[UDP])
+        elif p.haslayer(ICMP):
+            self.packet_size = len(p[ICMP])
 
     def getPacketSize(self):
         return self.packet_size

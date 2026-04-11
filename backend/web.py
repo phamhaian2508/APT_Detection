@@ -14,7 +14,7 @@ from flask_socketio import SocketIO
 
 from backend.config import AppConfig
 from backend.capture import CaptureService
-from backend.features import demo_prediction_filter_labels
+from backend.features import build_alert_record, demo_prediction_filter_labels, translate_prediction_label, translate_risk_label
 from backend.inference import InferenceService
 from backend.logging_utils import setup_logging
 from backend.storage import AlertRepository
@@ -29,6 +29,7 @@ class AppRuntime:
         self.logger = logger
         self.capture = CaptureService(
             self.handle_terminated_flow,
+            on_flow_updated=self.handle_live_flow_update,
             flow_timeout=config.flow_timeout,
             sniff_timeout=config.sniff_timeout,
             process_refresh_interval=config.process_refresh_interval,
@@ -56,6 +57,53 @@ class AppRuntime:
             if dropped_count % 100 == 1:
                 self.logger.warning("Flow queue full, dropped %s terminated flows.", dropped_count)
             return
+
+    def handle_live_flow_update(self, snapshot: dict[str, Any]) -> None:
+        flow_key = str(snapshot.get("flowKey") or "")
+        payload = self.build_live_payload(flow_key)
+        if payload is None:
+            payload = dict(snapshot)
+            if payload.get("probability") in ("", None):
+                payload["probability"] = 0.0
+        else:
+            payload["packetsSeen"] = snapshot.get("packetsSeen")
+        self.socketio.emit(
+            "newresult",
+            {
+                "result": payload,
+                "ips": self.top_sources_snapshot(limit=10),
+            },
+            namespace="/test",
+        )
+
+    def build_live_record(self, flow_key: str) -> Dict[str, Any] | None:
+        flow = self.capture.current_flows.get(flow_key)
+        if flow is None:
+            return None
+
+        features = flow.preview_features()
+        record = self.inference.classify_preview(features)
+        if record is None:
+            record = build_alert_record(
+                features,
+                translate_prediction_label("Benign"),
+                0.0,
+                translate_risk_label("Low"),
+            )
+
+        live_record = dict(record)
+        live_record["FlowID"] = flow_key
+        return live_record
+
+    def build_live_payload(self, flow_key: str) -> Dict[str, Any] | None:
+        record = self.build_live_record(flow_key)
+        if record is None:
+            return None
+
+        payload = self.inference.build_stream_payload(record)
+        payload["id"] = flow_key
+        payload["isProvisional"] = True
+        return payload
 
     def start_capture(self) -> None:
         with self.thread_lock:
@@ -197,7 +245,10 @@ def create_app() -> tuple[Flask, SocketIO]:
     @app.route("/flow-detail")
     def flow_detail():
         flow_id = request.args.get("flow_id", default=-1, type=int)
+        flow_key = (request.args.get("flow_key") or "").strip()
         record = repository.get_alert(flow_id)
+        if record is None and flow_key:
+            record = runtime.build_live_record(flow_key)
         if record is None:
             abort(404)
 

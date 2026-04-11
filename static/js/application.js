@@ -14,6 +14,8 @@ $(document).ready(function () {
     var maxStoredRows = 200;
     var maxPriorityRows = 12;
     var apiLimit = 200;
+    var nextDisplayId = 1;
+    var displayIdByKey = {};
 
     function normalizeText(value) {
         return String(value || "")
@@ -126,6 +128,9 @@ $(document).ready(function () {
     }
 
     function isPriorityFlow(flow) {
+        if (flow && flow.isProvisional) {
+            return false;
+        }
         if (flow && typeof flow.isPriority === "boolean") {
             return flow.isPriority;
         }
@@ -143,9 +148,47 @@ $(document).ready(function () {
         return value;
     }
 
+    function analysisUrl(flow) {
+        if (flow.isProvisional && flow.flowKey) {
+            return "/flow-detail?flow_key=" + encodeURIComponent(flow.flowKey);
+        }
+        return "/flow-detail?flow_id=" + encodeURIComponent(flow.id);
+    }
+
+    function displayKeyForFlow(flow) {
+        if (flow.flowKey) {
+            return "flow:" + flow.flowKey;
+        }
+        return "id:" + String(flow.id || "");
+    }
+
+    function assignDisplayId(flow) {
+        var displayKey = displayKeyForFlow(flow);
+        if (displayIdByKey[displayKey]) {
+            flow.displayId = displayIdByKey[displayKey];
+            return flow;
+        }
+
+        if (flow.displayId !== null && flow.displayId !== undefined && flow.displayId !== "") {
+            displayIdByKey[displayKey] = flow.displayId;
+            if (flow.displayId >= nextDisplayId) {
+                nextDisplayId = flow.displayId + 1;
+            }
+            return flow;
+        }
+
+        flow.displayId = nextDisplayId;
+        displayIdByKey[displayKey] = nextDisplayId;
+        nextDisplayId += 1;
+        return flow;
+    }
+
     function normalizeFlow(flow) {
+        var parsedId = Number(flow.id);
         return {
             id: flow.id,
+            flowKey: flow.flowKey || "",
+            displayId: Number.isNaN(parsedId) ? null : parsedId,
             src: flow.src,
             srcDisplay: flow.srcDisplay || flow.src,
             srcPort: flow.srcPort,
@@ -160,7 +203,8 @@ $(document).ready(function () {
             prediction: flow.prediction,
             probability: flow.probability,
             risk: flow.risk,
-            isPriority: Boolean(flow.isPriority)
+            isPriority: Boolean(flow.isPriority),
+            isProvisional: Boolean(flow.isProvisional)
         };
     }
 
@@ -229,6 +273,37 @@ $(document).ready(function () {
         }
     }
 
+    function computeTopSources(flows, limit) {
+        var counts = {};
+        var entries = [];
+        var maxItems = limit || 10;
+
+        for (var index = 0; index < flows.length; index += 1) {
+            var sourceIp = flows[index].src;
+            if (!sourceIp) {
+                continue;
+            }
+            counts[sourceIp] = (counts[sourceIp] || 0) + 1;
+        }
+
+        Object.keys(counts).forEach(function (sourceIp) {
+            entries.push({
+                SourceIP: sourceIp,
+                count: counts[sourceIp]
+            });
+        });
+
+        entries.sort(function (left, right) {
+            var countDiff = right.count - left.count;
+            if (countDiff !== 0) {
+                return countDiff;
+            }
+            return normalizeText(left.SourceIP).localeCompare(normalizeText(right.SourceIP));
+        });
+
+        return entries.slice(0, maxItems);
+    }
+
     function visibleFlows() {
         var flows = recentFlows.slice();
         if (priorityOnly) {
@@ -252,7 +327,7 @@ $(document).ready(function () {
         var row = "";
 
         row += '<tr class="' + rowClass + '">';
-        row += "<td><strong>#" + displayValue(flow.id, "-") + "</strong></td>";
+        row += "<td><strong>#" + displayValue(flow.displayId, "-") + "</strong></td>";
         row += "<td>" + (flow.srcDisplay || flow.src) + "</td>";
         row += "<td>" + displayValue(flow.srcPort, "-") + "</td>";
         row += "<td>" + (flow.dstDisplay || flow.dst) + "</td>";
@@ -265,7 +340,7 @@ $(document).ready(function () {
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + displayValue(flow.prediction, "-") + "</span></td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
         row += '<td><span class="risk-pill ' + riskClass(flow.risk) + '">' + displayValue(flow.risk, "-") + "</span></td>";
-        row += '<td><a class="action-link" href="/flow-detail?flow_id=' + flow.id + '">Phân tích</a></td>';
+        row += '<td><a class="action-link" href="' + analysisUrl(flow) + '">Phân tích</a></td>';
         row += "</tr>";
 
         return row;
@@ -291,13 +366,13 @@ $(document).ready(function () {
         var row = "";
 
         row += '<tr class="flow-row-priority">';
-        row += "<td><strong>" + flow.id + "</strong></td>";
+        row += "<td><strong>" + displayValue(flow.displayId, "-") + "</strong></td>";
         row += "<td>" + (flow.srcDisplay || flow.src) + "</td>";
         row += "<td>" + (flow.dstDisplay || flow.dst) + "</td>";
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + flow.prediction + "</span></td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
         row += '<td><span class="risk-pill ' + riskClass(flow.risk) + '">' + flow.risk + "</span></td>";
-        row += '<td><a class="action-link" href="/flow-detail?flow_id=' + flow.id + '">Phân tích</a></td>';
+        row += '<td><a class="action-link" href="' + analysisUrl(flow) + '">Phân tích</a></td>';
         row += "</tr>";
 
         return row;
@@ -475,6 +550,7 @@ $(document).ready(function () {
     }
 
     function refreshDashboard() {
+        latestIps = computeTopSources(recentFlows, 10);
         renderMainTable();
         renderPriorityTable();
         renderStats(latestIps);
@@ -484,8 +560,16 @@ $(document).ready(function () {
     }
 
     function upsertFlow(flow) {
+        flow = assignDisplayId(flow);
+
         recentFlows = recentFlows.filter(function (item) {
-            return item.id !== flow.id;
+            if (item.id === flow.id) {
+                return false;
+            }
+            if (flow.flowKey && item.flowKey === flow.flowKey) {
+                return false;
+            }
+            return true;
         });
         recentFlows.unshift(flow);
         if (recentFlows.length > maxStoredRows) {
@@ -503,8 +587,11 @@ $(document).ready(function () {
 
         $.getJSON(url)
             .done(function (response) {
-                recentFlows = (response.items || []).map(normalizeFlow);
-                latestIps = response.top_sources || [];
+                displayIdByKey = {};
+                nextDisplayId = 1;
+                recentFlows = (response.items || []).map(function (item) {
+                    return assignDisplayId(normalizeFlow(item));
+                });
                 rebuildPriorityFlows();
                 bufferedCount = 0;
                 refreshDashboard();
@@ -657,10 +744,6 @@ $(document).ready(function () {
 
     socket.on("newresult", function (msg) {
         var flow = normalizeFlow(msg.result || {});
-
-        if (!hasActiveFilters()) {
-            latestIps = msg.ips || [];
-        }
 
         if (hasActiveFilters() && !flowMatchesFilters(flow)) {
             if (liveUpdatesPaused) {
