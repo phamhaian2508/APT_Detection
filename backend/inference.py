@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import ipaddress
 import json
 import logging
@@ -27,9 +28,11 @@ from backend.features import (
     feature_vector_from_record,
     is_priority_alert,
     risk_label_from_probability,
+    risk_rank,
     translate_prediction_label,
     translate_risk_label,
 )
+from backend.flood_heuristics import FloodAttackHeuristic
 from backend.ftp_heuristics import FTPBruteForceHeuristic
 from backend.ssh_heuristics import SSHBruteForceHeuristic
 
@@ -98,6 +101,7 @@ class InferenceService:
         self.logger = logger or logging.getLogger("apt_detection.inference")
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
         self.ftp_heuristic = FTPBruteForceHeuristic()
+        self.flood_heuristic = FloodAttackHeuristic()
         self.ssh_heuristic = SSHBruteForceHeuristic()
         self.ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
         self.ae_model = keras.models.load_model("models/autoencoder_39ft.hdf5")
@@ -114,7 +118,7 @@ class InferenceService:
         else:
             self.logger.info("LIME explanations are disabled by configuration.")
 
-    def classify(self, features: List[Any]) -> Dict[str, Any] | None:
+    def classify(self, features: List[Any], preview: bool = False) -> Dict[str, Any] | None:
         try:
             feature_vector = [np.nan if value in [np.inf, -np.inf] else float(value) for value in features[:39]]
         except (TypeError, ValueError):
@@ -132,19 +136,53 @@ class InferenceService:
         classification = translate_prediction_label(prediction)
         record = build_alert_record(features, classification, probability_score, risk_label)
 
-        heuristic_match = self.ssh_heuristic.evaluate(record, classification)
+        heuristic_match = self._evaluate_heuristic(self.ssh_heuristic, record, classification, preview=preview)
         if heuristic_match is not None:
             record["Classification"] = heuristic_match.classification
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk
 
-        heuristic_match = self.ftp_heuristic.evaluate(record, str(record["Classification"]))
+        heuristic_match = self._evaluate_heuristic(
+            self.ftp_heuristic,
+            record,
+            str(record["Classification"]),
+            preview=preview,
+        )
         if heuristic_match is not None:
             record["Classification"] = heuristic_match.classification
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk
+
+        heuristic_match = self._evaluate_heuristic(
+            self.flood_heuristic,
+            record,
+            str(record["Classification"]),
+            preview=preview,
+        )
+        if heuristic_match is not None:
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
+        ddos_label = translate_prediction_label("DDoS")
+        dos_label = translate_prediction_label("DoS")
+        if record["Classification"] == ddos_label and risk_rank(str(record["Risk"])) < risk_rank("High"):
+            record["Risk"] = translate_risk_label("High")
+        elif record["Classification"] == dos_label:
+            if risk_rank(str(record["Risk"])) > risk_rank("High"):
+                record["Risk"] = translate_risk_label("High")
+            elif risk_rank(str(record["Risk"])) < risk_rank("Low"):
+                record["Risk"] = translate_risk_label("Low")
 
         return record
+
+    def classify_preview(self, features: List[Any]) -> Dict[str, Any] | None:
+        return self.classify(features, preview=True)
+
+    @staticmethod
+    def _evaluate_heuristic(heuristic: Any, record: Dict[str, Any], current_prediction: str, preview: bool = False) -> Any:
+        engine = copy.deepcopy(heuristic) if preview else heuristic
+        return engine.evaluate(record, current_prediction)
 
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
         prediction = translate_prediction_label(record["Classification"])

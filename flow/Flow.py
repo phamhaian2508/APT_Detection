@@ -1,3 +1,4 @@
+import copy
 import math
 
 from flow.FlowFeature import FlowFeatures
@@ -106,6 +107,7 @@ class Flow:
 
     def live_snapshot(self, flow_key):
         return {
+            "id": flow_key,
             "flowKey": flow_key,
             "src": self.flowFeatures.getSrc(),
             "srcPort": self.flowFeatures.getSrcPort(),
@@ -122,6 +124,9 @@ class Flow:
             "isProvisional": True,
             "packetsSeen": self.packet_count,
         }
+
+    def preview_features(self):
+        return copy.deepcopy(self).terminated()
 
     def new(self, packetInfo, direction):
         if direction == 'bwd':
@@ -152,15 +157,15 @@ class Flow:
         self.flowFeatures.setMaxPacketLen(max(self.flowFeatures.getMaxPacketLen(), packetInfo.getPayloadBytes()))
 
         if packetInfo.getFINFlag():
-            self.flowFeatures.setFINFlagCount(1)
+            self.flowFeatures.setFINFlagCount(self.flowFeatures.getFINFlagCount() + 1)
         if packetInfo.getSYNFlag():
-            self.flowFeatures.setSYNFlagCount(1)
+            self.flowFeatures.setSYNFlagCount(self.flowFeatures.getSYNFlagCount() + 1)
         if packetInfo.getPSHFlag():
-            self.flowFeatures.setPSHFlagCount(1)
+            self.flowFeatures.setPSHFlagCount(self.flowFeatures.getPSHFlagCount() + 1)
         if packetInfo.getACKFlag():
-            self.flowFeatures.setACKFlagCount(1)
+            self.flowFeatures.setACKFlagCount(self.flowFeatures.getACKFlagCount() + 1)
         if packetInfo.getURGFlag():
-            self.flowFeatures.setURGFlagCount(1)
+            self.flowFeatures.setURGFlagCount(self.flowFeatures.getURGFlagCount() + 1)
 
         time = packetInfo.getTimestamp()
         if time - self.endActiveTime > threshold:

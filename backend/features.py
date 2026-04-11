@@ -262,6 +262,9 @@ def build_risk_summary_html(label: str) -> str:
 def is_priority_alert(prediction_label: str, risk_label: str) -> bool:
     normalized_prediction = translate_prediction_label(prediction_label)
     benign_prediction = translate_prediction_label("Benign")
+    dos_prediction = translate_prediction_label("DoS")
+    if normalized_prediction == dos_prediction:
+        return risk_rank(risk_label) >= risk_rank("High")
     if normalized_prediction != benign_prediction:
         return True
     return risk_rank(risk_label) > 2
