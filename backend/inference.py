@@ -25,6 +25,7 @@ from backend.features import (
     DISPLAY_LABELS,
     build_risk_summary_html,
     build_alert_record,
+    clamp_attack_risk,
     feature_vector_from_record,
     is_priority_alert,
     risk_label_from_probability,
@@ -164,15 +165,7 @@ class InferenceService:
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk
 
-        ddos_label = translate_prediction_label("DDoS")
-        dos_label = translate_prediction_label("DoS")
-        if record["Classification"] == ddos_label and risk_rank(str(record["Risk"])) < risk_rank("High"):
-            record["Risk"] = translate_risk_label("High")
-        elif record["Classification"] == dos_label:
-            if risk_rank(str(record["Risk"])) > risk_rank("High"):
-                record["Risk"] = translate_risk_label("High")
-            elif risk_rank(str(record["Risk"])) < risk_rank("Low"):
-                record["Risk"] = translate_risk_label("Low")
+        record["Risk"] = clamp_attack_risk(str(record["Classification"]), str(record["Risk"]))
 
         return record
 

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Deque, Dict, Tuple
 
-from backend.features import risk_label_from_probability, translate_prediction_label, translate_risk_label
+from backend.features import risk_label_from_probability, risk_rank, translate_prediction_label, translate_risk_label
 
 
 @dataclass(frozen=True)
@@ -47,6 +47,12 @@ class FloodAttackHeuristic:
         dos_min_average_target_score: float = 6.2,
         dos_high_rate_average_target_score: float = 7.0,
         dos_extreme_single_flow_packet_rate_threshold: float = 700.0,
+        target_pressure_medium_event_threshold: int = 6,
+        target_pressure_high_event_threshold: int = 10,
+        target_pressure_medium_unique_sources_threshold: int = 3,
+        target_pressure_high_unique_sources_threshold: int = 6,
+        target_pressure_medium_score_threshold: float = 34.0,
+        target_pressure_high_score_threshold: float = 60.0,
         base_dos_probability: float = 0.68,
         base_ddos_probability: float = 0.84,
         probability_step: float = 0.035,
@@ -69,6 +75,12 @@ class FloodAttackHeuristic:
         self.dos_min_average_target_score = dos_min_average_target_score
         self.dos_high_rate_average_target_score = dos_high_rate_average_target_score
         self.dos_extreme_single_flow_packet_rate_threshold = dos_extreme_single_flow_packet_rate_threshold
+        self.target_pressure_medium_event_threshold = target_pressure_medium_event_threshold
+        self.target_pressure_high_event_threshold = target_pressure_high_event_threshold
+        self.target_pressure_medium_unique_sources_threshold = target_pressure_medium_unique_sources_threshold
+        self.target_pressure_high_unique_sources_threshold = target_pressure_high_unique_sources_threshold
+        self.target_pressure_medium_score_threshold = target_pressure_medium_score_threshold
+        self.target_pressure_high_score_threshold = target_pressure_high_score_threshold
         self.base_dos_probability = base_dos_probability
         self.base_ddos_probability = base_ddos_probability
         self.probability_step = probability_step
@@ -97,6 +109,11 @@ class FloodAttackHeuristic:
         source_target_count, source_target_score = self._register_source_target_event(source_target_key, event)
         source_event_share = 0.0 if event_count <= 0 else source_target_count / event_count
         source_score_share = 0.0 if target_score <= 0 else source_target_score / target_score
+        target_pressure_risk = self._target_pressure_risk_label(
+            event_count=event_count,
+            unique_sources=unique_sources,
+            target_score=target_score,
+        )
 
         if self._is_ddos(event_count, unique_sources, target_score, source_event_share, source_score_share, packet_rate, flow_score):
             score = min(
@@ -141,6 +158,8 @@ class FloodAttackHeuristic:
                 packet_rate=packet_rate,
                 flow_score=flow_score,
             )
+            if target_pressure_risk is not None and risk_rank(target_pressure_risk) > risk_rank(risk):
+                risk = target_pressure_risk
             return FloodHeuristicMatch(
                 classification=translate_prediction_label("DoS"),
                 probability=score,
@@ -149,6 +168,21 @@ class FloodAttackHeuristic:
                 unique_sources=unique_sources,
                 attack_family=attack_family,
                 score=max(source_score, source_target_score, flow_score),
+            )
+
+        if normalized_prediction == translate_prediction_label("DoS") and target_pressure_risk is not None:
+            return FloodHeuristicMatch(
+                classification=translate_prediction_label("DoS"),
+                probability=self._target_pressure_probability(
+                    event_count=event_count,
+                    unique_sources=unique_sources,
+                    target_score=target_score,
+                ),
+                risk=translate_risk_label(target_pressure_risk),
+                events=event_count,
+                unique_sources=unique_sources,
+                attack_family=attack_family,
+                score=target_score,
             )
 
         return None
@@ -384,6 +418,62 @@ class FloodAttackHeuristic:
         ):
             return "Medium"
         return "Low"
+
+    def _target_pressure_risk_label(
+        self,
+        event_count: int,
+        unique_sources: int,
+        target_score: float,
+    ) -> str | None:
+        high_pressure = (
+            event_count >= self.target_pressure_high_event_threshold
+            and target_score >= self.target_pressure_high_score_threshold
+        )
+        high_distribution = (
+            unique_sources >= self.target_pressure_high_unique_sources_threshold
+            and target_score >= self.target_pressure_high_score_threshold
+        )
+        if high_pressure or high_distribution:
+            return "High"
+
+        medium_pressure = (
+            event_count >= self.target_pressure_medium_event_threshold
+            and target_score >= self.target_pressure_medium_score_threshold
+        )
+        medium_distribution = (
+            unique_sources >= self.target_pressure_medium_unique_sources_threshold
+            and target_score >= (self.target_pressure_medium_score_threshold * 0.8)
+        )
+        if medium_pressure or medium_distribution:
+            return "Medium"
+        return None
+
+    def _target_pressure_probability(
+        self,
+        event_count: int,
+        unique_sources: int,
+        target_score: float,
+    ) -> float:
+        event_bonus = self._normalize(
+            event_count,
+            lower=self.target_pressure_medium_event_threshold,
+            upper=max(self.target_pressure_medium_event_threshold + 1, self.target_pressure_high_event_threshold),
+        )
+        source_bonus = self._normalize(
+            unique_sources,
+            lower=self.target_pressure_medium_unique_sources_threshold,
+            upper=max(
+                self.target_pressure_medium_unique_sources_threshold + 1,
+                self.target_pressure_high_unique_sources_threshold,
+            ),
+        )
+        score_bonus = self._normalize(
+            target_score,
+            lower=self.target_pressure_medium_score_threshold,
+            upper=max(self.target_pressure_medium_score_threshold + 1.0, self.target_pressure_high_score_threshold),
+        )
+        probability = self.base_dos_probability + (event_bonus * 0.08) + (source_bonus * 0.1) + (score_bonus * 0.1)
+        return min(probability, 0.95)
 
     def _score_tcp_candidate(
         self,

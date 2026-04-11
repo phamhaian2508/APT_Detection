@@ -127,12 +127,20 @@ $(document).ready(function () {
         return normalized === "luu luong hop le" || normalized === "benign";
     }
 
+    function isFloodAttackPrediction(prediction) {
+        var normalized = normalizeText(prediction);
+        return normalized === "tan cong dos" || normalized === "dos" || normalized === "tan cong ddos" || normalized === "ddos";
+    }
+
     function isPriorityFlow(flow) {
         if (flow && flow.isProvisional) {
             return false;
         }
         if (flow && typeof flow.isPriority === "boolean") {
             return flow.isPriority;
+        }
+        if (isFloodAttackPrediction(flow.prediction)) {
+            return riskRank(flow.risk) >= 3;
         }
         return !isBenignPrediction(flow.prediction) || riskRank(flow.risk) > 2;
     }
@@ -162,24 +170,36 @@ $(document).ready(function () {
         return "id:" + String(flow.id || "");
     }
 
+    function persistedDisplayId(flow) {
+        var parsedId = Number(flow.id);
+        if (flow.isProvisional || Number.isNaN(parsedId) || parsedId <= 0) {
+            return null;
+        }
+        return parsedId;
+    }
+
     function assignDisplayId(flow) {
+        var persistedId = persistedDisplayId(flow);
         var displayKey = displayKeyForFlow(flow);
+
+        if (persistedId !== null) {
+            flow.displayId = persistedId;
+            displayIdByKey["id:" + String(flow.id)] = persistedId;
+            if (flow.flowKey) {
+                displayIdByKey["flow:" + flow.flowKey] = persistedId;
+            }
+            if (persistedId >= nextDisplayId) {
+                nextDisplayId = persistedId + 1;
+            }
+            return flow;
+        }
+
         if (displayIdByKey[displayKey]) {
             flow.displayId = displayIdByKey[displayKey];
             return flow;
         }
 
-        if (flow.displayId !== null && flow.displayId !== undefined && flow.displayId !== "") {
-            displayIdByKey[displayKey] = flow.displayId;
-            if (flow.displayId >= nextDisplayId) {
-                nextDisplayId = flow.displayId + 1;
-            }
-            return flow;
-        }
-
-        flow.displayId = nextDisplayId;
-        displayIdByKey[displayKey] = nextDisplayId;
-        nextDisplayId += 1;
+        flow.displayId = null;
         return flow;
     }
 
