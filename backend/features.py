@@ -248,12 +248,50 @@ def risk_css_class(label: str) -> str:
     return RISK_CLASSES.get(translate_risk_label(label), "risk-minimal")
 
 
+def build_risk_summary_html(label: str) -> str:
+    translated_label = translate_risk_label(label)
+    css_class = risk_css_class(translated_label)
+    return (
+        f'<div class="risk-summary {css_class}">'
+        f'<span class="risk-label">Mức rủi ro</span>'
+        f'<span class="risk-pill {css_class}">{translated_label}</span>'
+        f"</div>"
+    )
+
+
 def is_priority_alert(prediction_label: str, risk_label: str) -> bool:
     normalized_prediction = translate_prediction_label(prediction_label)
     benign_prediction = translate_prediction_label("Benign")
+    ddos_prediction = translate_prediction_label("DDoS")
+    dos_prediction = translate_prediction_label("DoS")
+    if normalized_prediction in {ddos_prediction, dos_prediction}:
+        return risk_rank(risk_label) >= risk_rank("High")
     if normalized_prediction != benign_prediction:
         return True
     return risk_rank(risk_label) > 2
+
+
+def clamp_attack_risk(prediction_label: str, risk_label: str) -> str:
+    normalized_prediction = translate_prediction_label(prediction_label)
+    normalized_risk = translate_risk_label(risk_label)
+    ddos_prediction = translate_prediction_label("DDoS")
+    dos_prediction = translate_prediction_label("DoS")
+
+    if normalized_prediction == ddos_prediction:
+        if risk_rank(normalized_risk) > risk_rank("High"):
+            return translate_risk_label("High")
+        if risk_rank(normalized_risk) < risk_rank("Medium"):
+            return translate_risk_label("Medium")
+        return normalized_risk
+
+    if normalized_prediction == dos_prediction:
+        if risk_rank(normalized_risk) > risk_rank("High"):
+            return translate_risk_label("High")
+        if risk_rank(normalized_risk) < risk_rank("Low"):
+            return translate_risk_label("Low")
+        return normalized_risk
+
+    return normalized_risk
 
 
 def prediction_filter_values(label: str) -> List[str]:

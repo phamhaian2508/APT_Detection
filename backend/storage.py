@@ -4,6 +4,7 @@ import csv
 import io
 import json
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from threading import Lock
 from typing import Any, Dict, Iterator, List, Tuple
@@ -39,8 +40,16 @@ class AlertRepository:
         connection.row_factory = sqlite3.Row
         return connection
 
+    @contextmanager
+    def _connection(self) -> Iterator[sqlite3.Connection]:
+        connection = self._connect()
+        try:
+            yield connection
+        finally:
+            connection.close()
+
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             connection.execute("PRAGMA journal_mode=WAL;")
             connection.execute(
                 """
@@ -73,7 +82,7 @@ class AlertRepository:
 
     def reset_runtime_data(self, clear_csv_logs: bool = True) -> None:
         with self._write_lock:
-            with self._connect() as connection:
+            with self._connection() as connection:
                 connection.execute("DELETE FROM alerts")
                 connection.execute("DELETE FROM sqlite_sequence WHERE name = 'alerts'")
                 connection.commit()
@@ -85,7 +94,7 @@ class AlertRepository:
     def save_alert(self, record: Dict[str, Any]) -> Dict[str, Any]:
         base_record = dict(record)
         with self._write_lock:
-            with self._connect() as connection:
+            with self._connection() as connection:
                 cursor = connection.execute(
                     """
                     INSERT INTO alerts (
@@ -132,7 +141,7 @@ class AlertRepository:
         return base_record
 
     def get_alert(self, flow_id: int) -> Dict[str, Any] | None:
-        with self._connect() as connection:
+        with self._connection() as connection:
             row = connection.execute("SELECT record_json FROM alerts WHERE flow_id = ?", (flow_id,)).fetchone()
         if row is None:
             return None
@@ -140,7 +149,7 @@ class AlertRepository:
 
     def query_alerts(self, filters: Dict[str, Any], limit: int = 200, offset: int = 0) -> Tuple[List[Dict[str, Any]], int]:
         where_clause, params = self._build_where_clause(filters)
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 f"""
                 SELECT record_json
@@ -159,7 +168,7 @@ class AlertRepository:
 
     def top_sources(self, filters: Dict[str, Any] | None = None, limit: int = 10) -> List[Dict[str, Any]]:
         where_clause, params = self._build_where_clause(filters or {})
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 f"""
                 SELECT src AS SourceIP, COUNT(*) AS count
@@ -174,7 +183,7 @@ class AlertRepository:
         return [{"SourceIP": row["SourceIP"], "count": row["count"]} for row in rows if row["SourceIP"]]
 
     def load_source_counts(self) -> Dict[str, int]:
-        with self._connect() as connection:
+        with self._connection() as connection:
             rows = connection.execute(
                 """
                 SELECT src, COUNT(*) AS count
@@ -204,7 +213,7 @@ class AlertRepository:
         where_clause, params = self._build_where_clause(filters)
         offset = 0
         while True:
-            with self._connect() as connection:
+            with self._connection() as connection:
                 rows = connection.execute(
                     f"""
                     SELECT record_json

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import ipaddress
 import json
 import logging
@@ -22,14 +23,19 @@ from tensorflow import keras
 from backend.features import (
     AE_FEATURES,
     DISPLAY_LABELS,
+    build_risk_summary_html,
     build_alert_record,
+    clamp_attack_risk,
     feature_vector_from_record,
     is_priority_alert,
-    risk_css_class,
     risk_label_from_probability,
+    risk_rank,
     translate_prediction_label,
     translate_risk_label,
 )
+from backend.flood_heuristics import FloodAttackHeuristic
+from backend.ftp_heuristics import FTPBruteForceHeuristic
+from backend.ssh_heuristics import SSHBruteForceHeuristic
 
 
 class GeoResolver:
@@ -95,6 +101,9 @@ class InferenceService:
         self._predict_lock = Lock()
         self.logger = logger or logging.getLogger("apt_detection.inference")
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
+        self.ftp_heuristic = FTPBruteForceHeuristic()
+        self.flood_heuristic = FloodAttackHeuristic()
+        self.ssh_heuristic = SSHBruteForceHeuristic()
         self.ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
         self.ae_model = keras.models.load_model("models/autoencoder_39ft.hdf5")
         with open("models/model.pkl", "rb") as model_file:
@@ -110,7 +119,7 @@ class InferenceService:
         else:
             self.logger.info("LIME explanations are disabled by configuration.")
 
-    def classify(self, features: List[Any]) -> Dict[str, Any] | None:
+    def classify(self, features: List[Any], preview: bool = False) -> Dict[str, Any] | None:
         try:
             feature_vector = [np.nan if value in [np.inf, -np.inf] else float(value) for value in features[:39]]
         except (TypeError, ValueError):
@@ -126,8 +135,47 @@ class InferenceService:
         risk_probability = float(np.sum(probabilities[1:])) if len(probabilities) > 1 else 0.0
         risk_label = translate_risk_label(risk_label_from_probability(risk_probability))
         classification = translate_prediction_label(prediction)
+        record = build_alert_record(features, classification, probability_score, risk_label)
 
-        return build_alert_record(features, classification, probability_score, risk_label)
+        heuristic_match = self._evaluate_heuristic(self.ssh_heuristic, record, classification, preview=preview)
+        if heuristic_match is not None:
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
+        heuristic_match = self._evaluate_heuristic(
+            self.ftp_heuristic,
+            record,
+            str(record["Classification"]),
+            preview=preview,
+        )
+        if heuristic_match is not None:
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
+        heuristic_match = self._evaluate_heuristic(
+            self.flood_heuristic,
+            record,
+            str(record["Classification"]),
+            preview=preview,
+        )
+        if heuristic_match is not None:
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
+        record["Risk"] = clamp_attack_risk(str(record["Classification"]), str(record["Risk"]))
+
+        return record
+
+    def classify_preview(self, features: List[Any]) -> Dict[str, Any] | None:
+        return self.classify(features, preview=True)
+
+    @staticmethod
+    def _evaluate_heuristic(heuristic: Any, record: Dict[str, Any], current_prediction: str, preview: bool = False) -> Any:
+        engine = copy.deepcopy(heuristic) if preview else heuristic
+        return engine.evaluate(record, current_prediction)
 
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
         prediction = translate_prediction_label(record["Classification"])
@@ -162,18 +210,7 @@ class InferenceService:
 
     def build_detail_context(self, record: Dict[str, Any]) -> Dict[str, Any]:
         feature_vector = feature_vector_from_record(record)
-        with self._predict_lock:
-            probabilities = self.classifier.predict_proba([feature_vector]).astype(float)[0]
-
-        risk_probability = float(np.sum(probabilities[1:])) if len(probabilities) > 1 else 0.0
-        risk_label = translate_risk_label(risk_label_from_probability(risk_probability))
-        risk_class = risk_css_class(risk_label)
-        risk_html = (
-            f'<div class="risk-summary {risk_class}">'
-            f'<span class="risk-label">Mức rủi ro</span>'
-            f'<span class="risk-pill {risk_class}">{risk_label}</span>'
-            f"</div>"
-        )
+        risk_html = build_risk_summary_html(str(record.get("Risk") or "Minimal"))
 
         exp_html = None
         if self.explainer is not None:

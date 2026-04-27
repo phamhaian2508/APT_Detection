@@ -133,6 +133,35 @@ class FlowTests(unittest.TestCase):
         self.assertEqual(features[39], "10.0.0.1")
         self.assertEqual(features[41], "10.0.0.2")
 
+    def test_flow_counts_multiple_tcp_flags_instead_of_storing_binary_presence(self):
+        flow = Flow(FakePacket(timestamp=0.0, payload_bytes=10, packet_size=30, syn=True))
+
+        flow.new(FakePacket(timestamp=0.5, payload_bytes=10, packet_size=30, syn=True), "fwd")
+        flow.new(FakePacket(timestamp=1.0, payload_bytes=10, packet_size=30, ack=True), "bwd")
+        flow.new(FakePacket(timestamp=1.5, payload_bytes=10, packet_size=30, ack=True), "bwd")
+
+        features = flow.terminated()
+
+        self.assertEqual(features[26], 2)
+        self.assertEqual(features[28], 2)
+
+    def test_live_snapshot_marks_flow_as_provisional(self):
+        flow = Flow(FakePacket(timestamp=0.0, payload_bytes=10, packet_size=30, syn=True))
+
+        snapshot = flow.live_snapshot("10.0.0.1-10.0.0.2-12345-80-TCP")
+
+        self.assertTrue(snapshot["isProvisional"])
+        self.assertEqual(snapshot["id"], snapshot["flowKey"])
+
+    def test_preview_features_matches_terminated_shape_without_mutating_flow(self):
+        flow = Flow(FakePacket(timestamp=0.0, payload_bytes=10, packet_size=30, syn=True))
+        flow.new(FakePacket(timestamp=1.0, payload_bytes=20, packet_size=40, ack=True), "bwd")
+
+        preview = flow.preview_features()
+
+        self.assertEqual(len(preview), len(flow.terminated()))
+        self.assertEqual(flow.packet_count, 2)
+
 
 if __name__ == "__main__":
     unittest.main()

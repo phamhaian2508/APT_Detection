@@ -36,6 +36,7 @@ def _get_float(name: str, default: float) -> float:
 class AppConfig:
     secret_key: str
     debug: bool
+    auto_start_capture: bool
     db_path: str
     output_csv_path: str
     input_csv_path: str
@@ -61,10 +62,11 @@ class AppConfig:
         return cls(
             secret_key=os.getenv("APT_SECRET_KEY", "secret!"),
             debug=_get_bool("APT_DEBUG", False),
+            auto_start_capture=_get_bool("APT_AUTO_START_CAPTURE", False),
             db_path=os.getenv("APT_DB_PATH", str(data_dir / "alerts.db")),
             output_csv_path=os.getenv("APT_OUTPUT_CSV_PATH", str(project_root / "output_logs.csv")),
             input_csv_path=os.getenv("APT_INPUT_CSV_PATH", str(project_root / "input_logs.csv")),
-            flow_timeout=_get_int("APT_FLOW_TIMEOUT", 30),
+            flow_timeout=_get_int("APT_FLOW_TIMEOUT", 5),
             sniff_timeout=_get_float("APT_SNIFF_TIMEOUT", 1.0),
             queue_size=_get_int("APT_QUEUE_SIZE", 5000),
             process_refresh_interval=_get_float("APT_PROCESS_REFRESH_INTERVAL", 2.0),

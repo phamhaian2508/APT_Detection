@@ -71,15 +71,20 @@ class CaptureService:
     def __init__(
         self,
         on_flow_terminated: Callable[[list], None],
+        on_flow_updated: Callable[[dict], None] | None = None,
         flow_timeout: int = 600,
         sniff_timeout: float = 1.0,
         process_refresh_interval: float = 2.0,
+        live_update_interval: float = 0.5,
         logger: logging.Logger | None = None,
     ) -> None:
         self.on_flow_terminated = on_flow_terminated
+        self.on_flow_updated = on_flow_updated
         self.flow_timeout = flow_timeout
         self.sniff_timeout = sniff_timeout
+        self.live_update_interval = live_update_interval
         self.current_flows: Dict[str, Flow] = {}
+        self._last_live_update: Dict[str, float] = {}
         self.logger = logger or logging.getLogger("apt_detection.capture")
         self.process_resolver = ProcessResolver(process_refresh_interval, logger=self.logger.getChild("process"))
 
@@ -117,12 +122,14 @@ class CaptureService:
                 if self._is_expired(flow, packet.getTimestamp()):
                     self._finalize_flow(packet.getFwdID(), flow)
                     self.current_flows[packet.getFwdID()] = Flow(packet)
+                    self._publish_live_snapshot(packet.getFwdID(), self.current_flows[packet.getFwdID()], force=True)
                 elif packet.getFINFlag() or packet.getRSTFlag():
                     flow.new(packet, "fwd")
                     self._finalize_flow(packet.getFwdID(), flow)
                 else:
                     flow.new(packet, "fwd")
                     self.current_flows[packet.getFwdID()] = flow
+                    self._publish_live_snapshot(packet.getFwdID(), flow)
                 return
 
             if packet.getBwdID() in self.current_flows:
@@ -130,15 +137,18 @@ class CaptureService:
                 if self._is_expired(flow, packet.getTimestamp()):
                     self._finalize_flow(packet.getBwdID(), flow)
                     self.current_flows[packet.getFwdID()] = Flow(packet)
+                    self._publish_live_snapshot(packet.getFwdID(), self.current_flows[packet.getFwdID()], force=True)
                 elif packet.getFINFlag() or packet.getRSTFlag():
                     flow.new(packet, "bwd")
                     self._finalize_flow(packet.getBwdID(), flow)
                 else:
                     flow.new(packet, "bwd")
                     self.current_flows[packet.getBwdID()] = flow
+                    self._publish_live_snapshot(packet.getBwdID(), flow)
                 return
 
             self.current_flows[packet.getFwdID()] = Flow(packet)
+            self._publish_live_snapshot(packet.getFwdID(), self.current_flows[packet.getFwdID()], force=True)
         except Exception:
             self.logger.exception("Unhandled error while processing packet.")
 
@@ -178,5 +188,18 @@ class CaptureService:
     def _finalize_flow(self, flow_key: str, flow: Optional[Flow]) -> None:
         if flow_key in self.current_flows:
             del self.current_flows[flow_key]
+        self._last_live_update.pop(flow_key, None)
         if flow is not None:
             self.on_flow_terminated(flow.terminated())
+
+    def _publish_live_snapshot(self, flow_key: str, flow: Flow, force: bool = False) -> None:
+        if self.on_flow_updated is None:
+            return
+
+        now = time.monotonic()
+        last_sent_at = self._last_live_update.get(flow_key, 0.0)
+        if not force and (now - last_sent_at) < self.live_update_interval:
+            return
+
+        self._last_live_update[flow_key] = now
+        self.on_flow_updated(flow.live_snapshot(flow_key))
