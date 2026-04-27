@@ -1,0 +1,15 @@
+venv/
+__pycache__/
+.git/
+.pytest_cache/
+.mypy_cache/
+*.pyc
+*.pyo
+*.pyd
+*.db
+*.log
+*.csv
+data/
+logs/
+input_logs.csv
+output_logs.csv

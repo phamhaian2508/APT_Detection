@@ -331,3 +331,14 @@
 2026-04-11 14:35:01 | INFO | apt_detection.runtime.capture | Capture loop started.
 2026-04-11 14:35:01 | INFO | apt_detection.runtime | Capture thread started.
 2026-04-11 14:35:02 | INFO | apt_detection | Socket client connected.
+2026-04-27 16:48:41 | INFO | apt_detection | Application initialized. DB=C:\Users\hungh\OneDrive\Máy tính\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-04-27 16:48:46 | INFO | apt_detection.runtime | Worker thread started.
+2026-04-27 16:48:46 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-04-27 16:48:46 | INFO | apt_detection.runtime | Capture thread started.
+2026-04-27 16:48:54 | INFO | apt_detection | Socket client connected.
+2026-04-27 16:52:35 | INFO | apt_detection | Socket client disconnected.
+2026-04-27 16:53:21 | INFO | apt_detection | Socket client connected.
+2026-04-27 16:54:57 | INFO | apt_detection | Socket client disconnected.
+2026-04-27 16:55:03 | INFO | apt_detection | Socket client connected.
+2026-04-27 16:55:23 | INFO | apt_detection | Socket client connected.
+2026-04-27 16:55:48 | INFO | apt_detection | Socket client disconnected.

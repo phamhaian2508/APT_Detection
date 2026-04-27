@@ -1,0 +1,37 @@
+services:
+  apt-detection:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: apt_detection
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    environment:
+      PYTHONUNBUFFERED: "1"
+      APT_RESET_DATA_ON_START: "0"
+      APT_AUTO_START_CAPTURE: "0"
+      APT_ENABLE_GEOLOCATION: "0"
+      APT_ENABLE_EXPLANATIONS: "0"
+      APT_LOG_LEVEL: "INFO"
+      APT_DB_PATH: "/app/data/alerts.db"
+      APT_INPUT_CSV_PATH: "/app/data/input_logs.csv"
+      APT_OUTPUT_CSV_PATH: "/app/data/output_logs.csv"
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/runtime-status', timeout=5)",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
