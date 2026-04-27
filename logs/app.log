@@ -75,3 +75,14 @@
 2026-04-07 06:34:23 | INFO | apt_detection.runtime | Worker thread started.
 2026-04-07 06:34:23 | INFO | apt_detection.runtime.capture | Capture loop started.
 2026-04-07 06:34:23 | INFO | apt_detection.runtime | Capture thread started.
+2026-04-09 17:50:13 | INFO | apt_detection | Application initialized. DB=C:\Users\hungh\OneDrive\Máy tính\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True
+2026-04-09 17:51:03 | INFO | apt_detection.runtime | Worker thread started.
+2026-04-09 17:51:03 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-04-09 17:51:03 | INFO | apt_detection.runtime | Capture thread started.
+2026-04-09 17:51:05 | INFO | apt_detection | Socket client connected.
+2026-04-09 20:52:14 | INFO | apt_detection | Application initialized. DB=C:\Users\hungh\OneDrive\Máy tính\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True
+2026-04-09 20:52:30 | INFO | apt_detection.runtime | Worker thread started.
+2026-04-09 20:52:30 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-04-09 20:52:30 | INFO | apt_detection.runtime | Capture thread started.
+2026-04-09 20:52:32 | INFO | apt_detection | Socket client connected.
+2026-04-09 20:54:06 | INFO | apt_detection | Socket client disconnected.
