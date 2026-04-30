@@ -156,6 +156,29 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
 
         self.assertEqual(matches, [None, None, None, None])
 
+    def test_short_connect_checks_with_high_rate_still_match_service_bruteforce(self):
+        detector = build_rdp_bruteforce_heuristic()
+        prediction = translate_prediction_label("Benign")
+
+        matches = []
+        for second in range(4):
+            matches.append(
+                detector.evaluate(
+                    build_record(
+                        DestPort=3389,
+                        FlowDuration=20_000,
+                        FwdPackets_s=100.0,
+                        FlowStartTime=f"2026-05-01 11:10:0{second}",
+                        FlowLastSeen=f"2026-05-01 11:10:0{second + 1}",
+                    ),
+                    prediction,
+                )
+            )
+
+        self.assertEqual(matches[:3], [None, None, None])
+        self.assertIsNotNone(matches[3])
+        self.assertEqual(matches[3].classification, translate_prediction_label("RDP-Patator"))
+
 
 if __name__ == "__main__":
     unittest.main()

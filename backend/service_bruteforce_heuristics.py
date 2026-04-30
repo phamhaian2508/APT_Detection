@@ -25,6 +25,7 @@ class ServiceBruteForceHeuristic:
         min_attempts: int = 4,
         max_flow_duration_us: int = 15_000_000,
         max_packet_rate_threshold: float = 60.0,
+        max_short_burst_forward_packets: float = 3.0,
         max_bwd_payload_bytes: int = 220,
         max_packet_len_bytes: int = 260,
         max_psh_flags: int = 2,
@@ -37,6 +38,7 @@ class ServiceBruteForceHeuristic:
         self.min_attempts = min_attempts
         self.max_flow_duration_us = max_flow_duration_us
         self.max_packet_rate_threshold = max_packet_rate_threshold
+        self.max_short_burst_forward_packets = max_short_burst_forward_packets
         self.max_bwd_payload_bytes = max_bwd_payload_bytes
         self.max_packet_len_bytes = max_packet_len_bytes
         self.max_psh_flags = max_psh_flags
@@ -83,7 +85,11 @@ class ServiceBruteForceHeuristic:
             return None
         if duration <= 0 or duration > self.max_flow_duration_us:
             return None
-        if packet_rate > self.max_packet_rate_threshold:
+        estimated_forward_packets = packet_rate * (duration / 1_000_000.0)
+        if (
+            packet_rate > self.max_packet_rate_threshold
+            and estimated_forward_packets > self.max_short_burst_forward_packets
+        ):
             return None
         if syn_flags < 1 or ack_flags < 1:
             return None
