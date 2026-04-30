@@ -197,14 +197,14 @@ class AlertRepository:
     def export_alerts_csv(self, filters: Dict[str, Any]) -> str:
         rows, _ = self.query_alerts(filters, limit=100000, offset=0)
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=["FlowID"] + MODEL_FEATURE_FIELDS + FLOW_METADATA_FIELDS + ["Classification", "Probability", "Risk"])
+        writer = csv.DictWriter(output, fieldnames=["FlowID"] + MODEL_FEATURE_FIELDS + FLOW_METADATA_FIELDS + ["Classification", "Probability", "Risk", "ServiceHints"])
         writer.writeheader()
         for row in rows:
             writer.writerow(row)
         return output.getvalue()
 
     def iter_alerts_csv(self, filters: Dict[str, Any], batch_size: int = 1000) -> Iterator[str]:
-        fieldnames = ["FlowID"] + MODEL_FEATURE_FIELDS + FLOW_METADATA_FIELDS + ["Classification", "Probability", "Risk"]
+        fieldnames = ["FlowID"] + MODEL_FEATURE_FIELDS + FLOW_METADATA_FIELDS + ["Classification", "Probability", "Risk", "ServiceHints"]
         header_buffer = io.StringIO()
         writer = csv.DictWriter(header_buffer, fieldnames=fieldnames)
         writer.writeheader()

@@ -184,9 +184,7 @@ class InferenceService:
             if heuristic_match is None:
                 continue
 
-            record["Classification"] = heuristic_match.classification
-            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
-            record["Risk"] = heuristic_match.risk
+            self._append_service_hint(record, heuristic_match.classification)
 
         heuristic_match = self._evaluate_heuristic(
             self.flood_heuristic,
@@ -211,9 +209,17 @@ class InferenceService:
         engine = copy.deepcopy(heuristic) if preview else heuristic
         return engine.evaluate(record, current_prediction)
 
+    @staticmethod
+    def _append_service_hint(record: Dict[str, Any], hint_label: str) -> None:
+        normalized_hint = translate_prediction_label(hint_label)
+        service_hints = record.setdefault("ServiceHints", [])
+        if normalized_hint not in service_hints:
+            service_hints.append(normalized_hint)
+
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
         prediction = translate_prediction_label(record["Classification"])
         risk = translate_risk_label(record["Risk"])
+        service_hints = [translate_prediction_label(hint) for hint in list(record.get("ServiceHints") or []) if hint]
         flow_key = "{src}-{dst}-{src_port}-{dst_port}-{protocol}".format(
             src=record["Src"],
             dst=record["Dest"],
@@ -236,9 +242,10 @@ class InferenceService:
             "appName": record["PName"],
             "pid": record["PID"],
             "prediction": prediction,
+            "serviceHints": service_hints,
             "probability": record["Probability"],
             "risk": risk,
-            "isPriority": is_priority_alert(prediction, risk),
+            "isPriority": is_priority_alert(prediction, risk) or bool(service_hints),
             "isProvisional": False,
         }
 
@@ -279,6 +286,9 @@ class InferenceService:
         display_record = dict(record)
         display_record["Classification"] = translate_prediction_label(display_record["Classification"])
         display_record["Risk"] = translate_risk_label(display_record["Risk"])
+        display_record["ServiceHints"] = ", ".join(
+            translate_prediction_label(hint) for hint in list(display_record.get("ServiceHints") or []) if hint
+        ) or "-"
 
         flow_table = (
             pd.DataFrame.from_dict(display_record, orient="index", columns=["Value"])

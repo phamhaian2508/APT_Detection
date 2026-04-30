@@ -205,6 +205,7 @@ $(document).ready(function () {
 
     function normalizeFlow(flow) {
         var parsedId = Number(flow.id);
+        var serviceHints = Array.isArray(flow.serviceHints) ? flow.serviceHints.slice() : [];
         return {
             id: flow.id,
             flowKey: flow.flowKey || "",
@@ -221,6 +222,7 @@ $(document).ready(function () {
             appName: flow.appName,
             pid: flow.pid,
             prediction: flow.prediction,
+            serviceHints: serviceHints,
             probability: flow.probability,
             risk: flow.risk,
             isPriority: Boolean(flow.isPriority),
@@ -243,6 +245,7 @@ $(document).ready(function () {
                 flow.appName,
                 flow.pid,
                 flow.prediction,
+                (flow.serviceHints || []).join(", "),
                 flow.risk
             ].some(function (value) {
                 return normalizeText(value).indexOf(normalizedQuery) >= 0;
@@ -343,6 +346,7 @@ $(document).ready(function () {
         var appName = displayValue(flow.appName, "Chưa xác định");
         var pidLabel = displayValue(flow.pid, "Chưa xác định");
         var predictionClass = isBenignPrediction(flow.prediction) ? "is-benign" : "is-alert";
+        var hintSummary = (flow.serviceHints || []).join(", ");
         var rowClass = isPriorityFlow(flow) ? "flow-row-priority" : "";
         var row = "";
 
@@ -357,7 +361,11 @@ $(document).ready(function () {
         row += "<td>" + displayValue(flow.lastSeen, "-") + "</td>";
         row += "<td>" + appName + '<span class="cell-secondary">PID ' + pidLabel + "</span></td>";
         row += "<td>" + pidLabel + "</td>";
-        row += '<td><span class="prediction-pill ' + predictionClass + '">' + displayValue(flow.prediction, "-") + "</span></td>";
+        row += '<td><span class="prediction-pill ' + predictionClass + '">' + displayValue(flow.prediction, "-") + "</span>";
+        if (hintSummary) {
+            row += '<span class="cell-secondary">Dáº¥u hiá»‡u: ' + hintSummary + "</span>";
+        }
+        row += "</td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
         row += '<td><span class="risk-pill ' + riskClass(flow.risk) + '">' + displayValue(flow.risk, "-") + "</span></td>";
         row += '<td><a class="action-link" href="' + analysisUrl(flow) + '">Phân tích</a></td>';
@@ -383,13 +391,18 @@ $(document).ready(function () {
 
     function renderPriorityRow(flow) {
         var predictionClass = isBenignPrediction(flow.prediction) ? "is-benign" : "is-alert";
+        var hintSummary = (flow.serviceHints || []).join(", ");
         var row = "";
 
         row += '<tr class="flow-row-priority">';
         row += "<td><strong>" + displayValue(flow.displayId, "-") + "</strong></td>";
         row += "<td>" + (flow.srcDisplay || flow.src) + "</td>";
         row += "<td>" + (flow.dstDisplay || flow.dst) + "</td>";
-        row += '<td><span class="prediction-pill ' + predictionClass + '">' + flow.prediction + "</span></td>";
+        row += '<td><span class="prediction-pill ' + predictionClass + '">' + flow.prediction + "</span>";
+        if (hintSummary) {
+            row += '<span class="cell-secondary">Dáº¥u hiá»‡u: ' + hintSummary + "</span>";
+        }
+        row += "</td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
         row += '<td><span class="risk-pill ' + riskClass(flow.risk) + '">' + flow.risk + "</span></td>";
         row += '<td><a class="action-link" href="' + analysisUrl(flow) + '">Phân tích</a></td>';

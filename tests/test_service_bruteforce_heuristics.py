@@ -18,6 +18,7 @@ def build_record(**overrides):
         "SYNFlagCount": 1,
         "ACKFlagCount": 1,
         "PSHFlagCount": 1,
+        "FwdPackets_s": 4.0,
         "Src": "192.168.1.10",
         "SrcPort": 41000,
         "Dest": "192.168.1.30",
@@ -134,32 +135,25 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
                 )
                 self.assertIsNone(match)
 
-    def test_server_process_markers_do_not_allow_immediate_promotion(self):
+    def test_high_packet_rate_microflows_are_not_treated_as_service_bruteforce(self):
+        detector = build_rdp_bruteforce_heuristic()
         prediction = translate_prediction_label("Benign")
-        profiles = [
-            ("RDP-Patator", build_rdp_bruteforce_heuristic(), 3389, "xrdp"),
-            ("SMB-Patator", build_smb_bruteforce_heuristic(), 445, "smbd"),
-            ("Telnet-Patator", build_telnet_bruteforce_heuristic(), 23, "telnetd"),
-            ("SMTP-Patator", build_smtp_bruteforce_heuristic(), 587, "postfix/smtpd"),
-        ]
 
-        for label, detector, port, process_name in profiles:
-            with self.subTest(label=label):
-                match = detector.evaluate(
+        matches = []
+        for second in range(4):
+            matches.append(
+                detector.evaluate(
                     build_record(
-                        Src="192.168.186.129",
-                        SrcPort=43111,
-                        Dest="192.168.186.134",
-                        DestPort=port,
-                        FlowStartTime="2026-04-30 11:00:00",
-                        FlowLastSeen="2026-04-30 11:00:07",
-                        FlowDuration=7_000_000,
-                        PName=process_name,
+                        DestPort=3389,
+                        FlowStartTime=f"2026-04-30 11:00:0{second}",
+                        FlowLastSeen=f"2026-04-30 11:00:0{second + 1}",
+                        FwdPackets_s=150.0,
                     ),
                     prediction,
                 )
+            )
 
-                self.assertIsNone(match)
+        self.assertEqual(matches, [None, None, None, None])
 
 
 if __name__ == "__main__":

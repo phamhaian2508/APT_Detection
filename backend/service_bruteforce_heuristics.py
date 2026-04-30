@@ -21,12 +21,10 @@ class ServiceBruteForceHeuristic:
         self,
         label: str,
         service_ports: Iterable[int],
-        process_markers: Iterable[str],
         window_seconds: int = 60,
         min_attempts: int = 4,
-        service_min_attempts: int = 4,
         max_flow_duration_us: int = 15_000_000,
-        service_max_flow_duration_us: int = 12_000_000,
+        max_packet_rate_threshold: float = 60.0,
         max_bwd_payload_bytes: int = 220,
         max_packet_len_bytes: int = 260,
         max_psh_flags: int = 2,
@@ -35,12 +33,10 @@ class ServiceBruteForceHeuristic:
     ) -> None:
         self.label = label
         self.service_ports = tuple(sorted({int(port) for port in service_ports}))
-        self.process_markers = tuple(marker.strip().lower() for marker in process_markers if marker.strip())
         self.window_seconds = window_seconds
         self.min_attempts = min_attempts
-        self.service_min_attempts = service_min_attempts
         self.max_flow_duration_us = max_flow_duration_us
-        self.service_max_flow_duration_us = service_max_flow_duration_us
+        self.max_packet_rate_threshold = max_packet_rate_threshold
         self.max_bwd_payload_bytes = max_bwd_payload_bytes
         self.max_packet_len_bytes = max_packet_len_bytes
         self.max_psh_flags = max_psh_flags
@@ -62,11 +58,10 @@ class ServiceBruteForceHeuristic:
 
         key, event_time = candidate
         attempts = self._register_attempt(key, event_time)
-        required_attempts = self.min_attempts
-        if attempts < required_attempts:
+        if attempts < self.min_attempts:
             return None
 
-        score = min(self.base_probability + ((attempts - required_attempts) * self.probability_step), 0.98)
+        score = min(self.base_probability + ((attempts - self.min_attempts) * self.probability_step), 0.98)
         return ServiceHeuristicMatch(
             classification=translate_prediction_label(self.label),
             probability=score,
@@ -84,6 +79,7 @@ class ServiceBruteForceHeuristic:
         syn_flags = self._to_float(record.get("SYNFlagCount"))
         ack_flags = self._to_float(record.get("ACKFlagCount"))
         psh_flags = self._to_float(record.get("PSHFlagCount"))
+        packet_rate = self._to_float(record.get("FwdPackets_s"))
         bwd_packet_mean = self._to_float(record.get("BwdPacketLenMean"))
         avg_bwd_segment = self._to_float(record.get("AvgBwdSegmentSize"))
         max_packet_len = self._to_float(record.get("MaxPacketLen"))
@@ -93,6 +89,8 @@ class ServiceBruteForceHeuristic:
         if src_port not in self.service_ports and dest_port not in self.service_ports:
             return None
         if duration <= 0 or duration > self.max_flow_duration_us:
+            return None
+        if packet_rate > self.max_packet_rate_threshold:
             return None
         if syn_flags < 1 or ack_flags < 1:
             return None
@@ -115,21 +113,6 @@ class ServiceBruteForceHeuristic:
             return None
 
         return (client_ip, server_ip, service_port), event_time
-
-    def _is_server_side_service(self, record: Dict[str, object]) -> bool:
-        process_name = str(record.get("PName") or "").strip().lower()
-        duration = self._to_float(record.get("FlowDuration"))
-        src_port = self._to_int(record.get("SrcPort"))
-        dest_port = self._to_int(record.get("DestPort"))
-
-        if duration <= 0 or duration > self.service_max_flow_duration_us:
-            return False
-        if src_port not in self.service_ports and dest_port not in self.service_ports:
-            return False
-        if not self.process_markers:
-            return False
-
-        return any(marker in process_name for marker in self.process_markers)
 
     def _register_attempt(self, key: Tuple[str, str, int], event_time: float) -> int:
         attempts = self._recent_attempts.setdefault(key, deque())
@@ -169,9 +152,8 @@ def build_rdp_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="RDP-Patator",
         service_ports=(3389,),
-        process_markers=("termservice", "xrdp"),
         max_flow_duration_us=18_000_000,
-        service_max_flow_duration_us=15_000_000,
+        max_packet_rate_threshold=32.0,
         max_bwd_payload_bytes=220,
         max_packet_len_bytes=280,
         base_probability=0.66,
@@ -182,9 +164,8 @@ def build_smb_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="SMB-Patator",
         service_ports=(445,),
-        process_markers=("smbd", "ksmbd", "samba"),
         max_flow_duration_us=15_000_000,
-        service_max_flow_duration_us=12_000_000,
+        max_packet_rate_threshold=40.0,
         max_bwd_payload_bytes=260,
         max_packet_len_bytes=320,
         base_probability=0.64,
@@ -195,9 +176,8 @@ def build_telnet_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="Telnet-Patator",
         service_ports=(23,),
-        process_markers=("telnetd", "in.telnetd", "utelnetd"),
         max_flow_duration_us=12_000_000,
-        service_max_flow_duration_us=10_000_000,
+        max_packet_rate_threshold=24.0,
         max_bwd_payload_bytes=160,
         max_packet_len_bytes=220,
         max_psh_flags=1,
@@ -209,9 +189,8 @@ def build_smtp_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="SMTP-Patator",
         service_ports=(25, 587),
-        process_markers=("postfix", "master", "smtpd", "exim", "sendmail"),
         max_flow_duration_us=18_000_000,
-        service_max_flow_duration_us=15_000_000,
+        max_packet_rate_threshold=36.0,
         max_bwd_payload_bytes=240,
         max_packet_len_bytes=320,
         base_probability=0.64,

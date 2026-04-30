@@ -1,9 +1,11 @@
 import unittest
 
 from backend.features import (
+    build_alert_record,
     build_risk_summary_html,
     clamp_attack_risk,
     is_priority_alert,
+    ordered_record,
     risk_rank,
     translate_prediction_label,
     translate_risk_label,
@@ -37,6 +39,16 @@ class FeatureHelpersTests(unittest.TestCase):
 
         self.assertEqual(risk_rank(clamped), risk_rank("High"))
         self.assertEqual(clamped, translate_risk_label("High"))
+
+    def test_alert_records_initialize_service_hints_and_keep_them_in_ordered_output(self):
+        record = build_alert_record([0.0] * 48, translate_prediction_label("Benign"), 0.12, translate_risk_label("Low"))
+        self.assertEqual(record["ServiceHints"], [])
+
+        record["FlowID"] = 1
+        record["ServiceHints"] = [translate_prediction_label("RDP-Patator")]
+        ordered = ordered_record(record)
+
+        self.assertEqual(ordered["ServiceHints"], [translate_prediction_label("RDP-Patator")])
 
 
 if __name__ == "__main__":

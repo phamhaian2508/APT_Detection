@@ -58,7 +58,7 @@ FLOW_METADATA_FIELDS = [
     "PID",
 ]
 
-ALERT_FIELDS = ["FlowID"] + MODEL_FEATURE_FIELDS + FLOW_METADATA_FIELDS + ["Classification", "Probability", "Risk"]
+ALERT_FIELDS = ["FlowID"] + MODEL_FEATURE_FIELDS + FLOW_METADATA_FIELDS + ["Classification", "Probability", "Risk", "ServiceHints"]
 
 AE_FEATURES = [
     "FlowDuration",
@@ -116,6 +116,7 @@ DISPLAY_LABELS = {
     "Classification": "Dự đoán",
     "Probability": "Xác suất",
     "Risk": "Rủi ro",
+    "ServiceHints": "Dấu hiệu dịch vụ",
 }
 
 PREDICTION_LABELS = {
@@ -337,6 +338,7 @@ def build_alert_record(features: Iterable[Any], classification: str, probability
     record["Classification"] = classification
     record["Probability"] = float(probability)
     record["Risk"] = risk
+    record["ServiceHints"] = []
     return record
 
 
