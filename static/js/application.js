@@ -360,7 +360,7 @@ $(document).ready(function () {
         var appName = displayValue(flow.appName, "Chưa xác định");
         var pidLabel = displayValue(flow.pid, "Chưa xác định");
         var predictionClass = isBenignPrediction(flow.prediction) ? "is-benign" : "is-alert";
-        var hintSummary = (flow.serviceHints || []).join(", ");
+        var primaryPrediction = "";
         var rowClass = isPriorityFlow(flow) ? "flow-row-priority" : "";
         var row = "";
 
@@ -376,8 +376,8 @@ $(document).ready(function () {
         row += "<td>" + appName + '<span class="cell-secondary">PID ' + pidLabel + "</span></td>";
         row += "<td>" + pidLabel + "</td>";
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + displayValue(flow.prediction, "-") + "</span>";
-        if (hintSummary) {
-            row += '<span class="cell-secondary">Hint: ' + hintSummary + "</span>";
+        if (primaryPrediction && primaryPrediction !== flow.prediction) {
+            row += '<span class="cell-secondary">Nhãn gốc: ' + primaryPrediction + "</span>";
         }
         row += "</td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
@@ -405,7 +405,7 @@ $(document).ready(function () {
 
     function renderPriorityRow(flow) {
         var predictionClass = isBenignPrediction(flow.prediction) ? "is-benign" : "is-alert";
-        var hintSummary = (flow.serviceHints || []).join(", ");
+        var primaryPrediction = "";
         var row = "";
 
         row += '<tr class="flow-row-priority">';
@@ -413,8 +413,8 @@ $(document).ready(function () {
         row += "<td>" + (flow.srcDisplay || flow.src) + "</td>";
         row += "<td>" + (flow.dstDisplay || flow.dst) + "</td>";
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + flow.prediction + "</span>";
-        if (hintSummary) {
-            row += '<span class="cell-secondary">Hint: ' + hintSummary + "</span>";
+        if (primaryPrediction && primaryPrediction !== flow.prediction) {
+            row += '<span class="cell-secondary">Nhãn gốc: ' + primaryPrediction + "</span>";
         }
         row += "</td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";

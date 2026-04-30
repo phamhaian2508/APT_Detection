@@ -184,6 +184,9 @@ class InferenceService:
             if heuristic_match is None:
                 continue
 
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
             self._append_service_hint(record, heuristic_match.classification)
 
         heuristic_match = self._evaluate_heuristic(
