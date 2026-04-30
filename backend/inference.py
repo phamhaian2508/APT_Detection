@@ -35,6 +35,12 @@ from backend.features import (
 )
 from backend.flood_heuristics import FloodAttackHeuristic
 from backend.ftp_heuristics import FTPBruteForceHeuristic
+from backend.service_bruteforce_heuristics import (
+    build_rdp_bruteforce_heuristic,
+    build_smb_bruteforce_heuristic,
+    build_smtp_bruteforce_heuristic,
+    build_telnet_bruteforce_heuristic,
+)
 from backend.ssh_heuristics import SSHBruteForceHeuristic
 
 
@@ -103,7 +109,11 @@ class InferenceService:
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
         self.ftp_heuristic = FTPBruteForceHeuristic()
         self.flood_heuristic = FloodAttackHeuristic()
+        self.rdp_heuristic = build_rdp_bruteforce_heuristic()
+        self.smb_heuristic = build_smb_bruteforce_heuristic()
         self.ssh_heuristic = SSHBruteForceHeuristic()
+        self.smtp_heuristic = build_smtp_bruteforce_heuristic()
+        self.telnet_heuristic = build_telnet_bruteforce_heuristic()
         self.ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
         self.ae_model = keras.models.load_model("models/autoencoder_39ft.hdf5")
         with open("models/model.pkl", "rb") as model_file:
@@ -161,6 +171,25 @@ class InferenceService:
             preview=preview,
         )
         if heuristic_match is not None:
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
+        for heuristic in (
+            self.rdp_heuristic,
+            self.smb_heuristic,
+            self.telnet_heuristic,
+            self.smtp_heuristic,
+        ):
+            heuristic_match = self._evaluate_heuristic(
+                heuristic,
+                record,
+                str(record["Classification"]),
+                preview=preview,
+            )
+            if heuristic_match is None:
+                continue
+
             record["Classification"] = heuristic_match.classification
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk

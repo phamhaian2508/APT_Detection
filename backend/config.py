@@ -36,6 +36,8 @@ def _get_float(name: str, default: float) -> float:
 class AppConfig:
     secret_key: str
     debug: bool
+    web_host: str
+    web_port: int
     auto_start_capture: bool
     db_path: str
     output_csv_path: str
@@ -62,6 +64,8 @@ class AppConfig:
         return cls(
             secret_key=os.getenv("APT_SECRET_KEY", "secret!"),
             debug=_get_bool("APT_DEBUG", False),
+            web_host=os.getenv("APT_WEB_HOST", "0.0.0.0"),
+            web_port=_get_int("APT_WEB_PORT", 5000),
             auto_start_capture=_get_bool("APT_AUTO_START_CAPTURE", False),
             db_path=os.getenv("APT_DB_PATH", str(data_dir / "alerts.db")),
             output_csv_path=os.getenv("APT_OUTPUT_CSV_PATH", str(project_root / "output_logs.csv")),

@@ -125,7 +125,11 @@ PREDICTION_LABELS = {
     "DoS": "Tấn công DoS",
     "FTP-Patator": "Tấn công dò quét FTP",
     "Probe": "Dò quét thăm dò",
+    "RDP-Patator": "Tấn công dò quét RDP",
+    "SMB-Patator": "Tấn công dò quét SMB",
     "SSH-Patator": "Tấn công dò quét SSH",
+    "SMTP-Patator": "Tấn công dò quét SMTP",
+    "Telnet-Patator": "Tấn công dò quét Telnet",
     "Web Attack": "Tấn công ứng dụng web",
 }
 
@@ -136,7 +140,11 @@ DEMO_FILTER_PREDICTION_KEYS = [
     "DoS",
     "FTP-Patator",
     "Probe",
+    "RDP-Patator",
+    "SMB-Patator",
     "SSH-Patator",
+    "SMTP-Patator",
+    "Telnet-Patator",
 ]
 
 PREDICTION_ALIASES = {
@@ -152,8 +160,12 @@ PREDICTION_ALIASES = {
     "Táº¥n cÃ´ng dÃ² quÃ©t FTP": "Tấn công dò quét FTP",
     "Do quet tham do": "Dò quét thăm dò",
     "DÃ² quÃ©t thÄƒm dÃ²": "Dò quét thăm dò",
+    "Tan cong do quet RDP": "Tấn công dò quét RDP",
+    "Tan cong do quet SMB": "Tấn công dò quét SMB",
     "Tan cong do quet SSH": "Tấn công dò quét SSH",
     "Táº¥n cÃ´ng dÃ² quÃ©t SSH": "Tấn công dò quét SSH",
+    "Tan cong do quet SMTP": "Tấn công dò quét SMTP",
+    "Tan cong do quet Telnet": "Tấn công dò quét Telnet",
     "Tan cong ung dung web": "Tấn công ứng dụng web",
     "Táº¥n cÃ´ng á»©ng dá»¥ng web": "Tấn công ứng dụng web",
 }
