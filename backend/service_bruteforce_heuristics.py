@@ -24,7 +24,7 @@ class ServiceBruteForceHeuristic:
         process_markers: Iterable[str],
         window_seconds: int = 60,
         min_attempts: int = 4,
-        service_min_attempts: int = 1,
+        service_min_attempts: int = 4,
         max_flow_duration_us: int = 15_000_000,
         service_max_flow_duration_us: int = 12_000_000,
         max_bwd_payload_bytes: int = 220,
@@ -49,13 +49,20 @@ class ServiceBruteForceHeuristic:
         self._recent_attempts: Dict[Tuple[str, str, int], Deque[float]] = {}
 
     def evaluate(self, record: Dict[str, object], current_prediction: str) -> ServiceHeuristicMatch | None:
+        normalized_prediction = translate_prediction_label(current_prediction)
+        if normalized_prediction not in {
+            translate_prediction_label("Benign"),
+            translate_prediction_label("Probe"),
+        }:
+            return None
+
         candidate = self._candidate_key(record)
         if candidate is None:
             return None
 
         key, event_time = candidate
         attempts = self._register_attempt(key, event_time)
-        required_attempts = self.service_min_attempts if self._is_server_side_service(record) else self.min_attempts
+        required_attempts = self.min_attempts
         if attempts < required_attempts:
             return None
 
@@ -162,7 +169,7 @@ def build_rdp_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="RDP-Patator",
         service_ports=(3389,),
-        process_markers=("termservice", "svchost", "xrdp"),
+        process_markers=("termservice", "xrdp"),
         max_flow_duration_us=18_000_000,
         service_max_flow_duration_us=15_000_000,
         max_bwd_payload_bytes=220,
@@ -175,7 +182,7 @@ def build_smb_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="SMB-Patator",
         service_ports=(445,),
-        process_markers=("smbd", "ksmbd", "samba", "system"),
+        process_markers=("smbd", "ksmbd", "samba"),
         max_flow_duration_us=15_000_000,
         service_max_flow_duration_us=12_000_000,
         max_bwd_payload_bytes=260,

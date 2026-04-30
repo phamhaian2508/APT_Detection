@@ -103,17 +103,27 @@ class GeoResolver:
 
 
 class InferenceService:
-    def __init__(self, enable_geolocation: bool = True, enable_explanations: bool = True, logger: logging.Logger | None = None) -> None:
+    def __init__(
+        self,
+        enable_geolocation: bool = True,
+        enable_explanations: bool = True,
+        enable_service_bruteforce_heuristics: bool = False,
+        logger: logging.Logger | None = None,
+    ) -> None:
         self._predict_lock = Lock()
         self.logger = logger or logging.getLogger("apt_detection.inference")
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
         self.ftp_heuristic = FTPBruteForceHeuristic()
         self.flood_heuristic = FloodAttackHeuristic()
-        self.rdp_heuristic = build_rdp_bruteforce_heuristic()
-        self.smb_heuristic = build_smb_bruteforce_heuristic()
         self.ssh_heuristic = SSHBruteForceHeuristic()
-        self.smtp_heuristic = build_smtp_bruteforce_heuristic()
-        self.telnet_heuristic = build_telnet_bruteforce_heuristic()
+        self.service_bruteforce_heuristics = []
+        if enable_service_bruteforce_heuristics:
+            self.service_bruteforce_heuristics = [
+                build_rdp_bruteforce_heuristic(),
+                build_smb_bruteforce_heuristic(),
+                build_telnet_bruteforce_heuristic(),
+                build_smtp_bruteforce_heuristic(),
+            ]
         self.ae_scaler = joblib.load("models/preprocess_pipeline_AE_39ft.save")
         self.ae_model = keras.models.load_model("models/autoencoder_39ft.hdf5")
         with open("models/model.pkl", "rb") as model_file:
@@ -164,23 +174,7 @@ class InferenceService:
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk
 
-        heuristic_match = self._evaluate_heuristic(
-            self.flood_heuristic,
-            record,
-            str(record["Classification"]),
-            preview=preview,
-        )
-        if heuristic_match is not None:
-            record["Classification"] = heuristic_match.classification
-            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
-            record["Risk"] = heuristic_match.risk
-
-        for heuristic in (
-            self.rdp_heuristic,
-            self.smb_heuristic,
-            self.telnet_heuristic,
-            self.smtp_heuristic,
-        ):
+        for heuristic in self.service_bruteforce_heuristics:
             heuristic_match = self._evaluate_heuristic(
                 heuristic,
                 record,
@@ -190,6 +184,17 @@ class InferenceService:
             if heuristic_match is None:
                 continue
 
+            record["Classification"] = heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
+            record["Risk"] = heuristic_match.risk
+
+        heuristic_match = self._evaluate_heuristic(
+            self.flood_heuristic,
+            record,
+            str(record["Classification"]),
+            preview=preview,
+        )
+        if heuristic_match is not None:
             record["Classification"] = heuristic_match.classification
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk

@@ -214,6 +214,7 @@ def create_app() -> tuple[Flask, SocketIO]:
     inference = InferenceService(
         enable_geolocation=config.enable_geolocation,
         enable_explanations=config.enable_explanations,
+        enable_service_bruteforce_heuristics=config.enable_service_bruteforce_heuristics,
         logger=logger.getChild("inference"),
     )
     runtime = AppRuntime(socketio, repository, inference, config, logger.getChild("runtime"))
