@@ -50,6 +50,7 @@ class AppConfig:
     enable_geolocation: bool
     enable_explanations: bool
     reset_data_on_start: bool
+    reset_data_on_page_load: bool
     write_compatibility_logs: bool
     log_level: str
     log_file: str
@@ -79,6 +80,7 @@ class AppConfig:
             enable_geolocation=_get_bool("APT_ENABLE_GEOLOCATION", True),
             enable_explanations=_get_bool("APT_ENABLE_EXPLANATIONS", True),
             reset_data_on_start=_get_bool("APT_RESET_DATA_ON_START", True),
+            reset_data_on_page_load=_get_bool("APT_RESET_DATA_ON_PAGE_LOAD", False),
             write_compatibility_logs=_get_bool("APT_WRITE_COMPATIBILITY_LOGS", False),
             log_level=os.getenv("APT_LOG_LEVEL", "INFO").upper(),
             log_file=os.getenv("APT_LOG_FILE", str(log_dir / "app.log")),

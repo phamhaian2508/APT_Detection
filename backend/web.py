@@ -254,7 +254,8 @@ def create_app() -> tuple[Flask, SocketIO]:
 
     @app.route("/")
     def index():
-        runtime.reset_runtime_data(clear_csv_logs=True)
+        if config.reset_data_on_page_load:
+            runtime.reset_runtime_data(clear_csv_logs=True)
         runtime.start_capture()
         return render_template(
             "index.html",
