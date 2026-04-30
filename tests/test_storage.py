@@ -4,7 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from backend.features import MODEL_FEATURE_FIELDS
+from backend.features import MODEL_FEATURE_FIELDS, translate_prediction_label, translate_risk_label
 from backend.storage import AlertRepository
 
 
@@ -24,9 +24,10 @@ def build_record(seed):
             "FlowLastSeen": f"2026-04-07 00:00:1{seed}",
             "PName": f"proc-{seed}.exe",
             "PID": 3000 + seed,
-            "Classification": "LÆ°u lÆ°á»£ng há»£p lá»‡",
+            "Classification": translate_prediction_label("Benign"),
             "Probability": 0.9,
-            "Risk": "Ráº¥t tháº¥p",
+            "Risk": translate_risk_label("Minimal"),
+            "ServiceHints": [],
         }
     )
     return record
@@ -51,8 +52,8 @@ class StorageTests(unittest.TestCase):
 
             self.assertEqual(len(rows), 2)
             self.assertEqual([row["FlowID"] for row in rows], [str(second["FlowID"]), str(first["FlowID"])])
-            self.assertEqual(rows[0]["Classification"], "LÆ°u lÆ°á»£ng há»£p lá»‡")
-            self.assertEqual(rows[0]["Risk"], "Ráº¥t tháº¥p")
+            self.assertEqual(rows[0]["Classification"], translate_prediction_label("Benign"))
+            self.assertEqual(rows[0]["Risk"], translate_risk_label("Minimal"))
 
     def test_reset_runtime_data_clears_alerts(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -70,6 +71,63 @@ class StorageTests(unittest.TestCase):
 
             self.assertEqual(total, 0)
             self.assertEqual(rows, [])
+
+    def test_reset_runtime_data_removes_disabled_compatibility_logs(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            output_path = tmp_path / "output_logs.csv"
+            input_path = tmp_path / "input_logs.csv"
+            output_path.write_text("legacy", encoding="utf-8")
+            input_path.write_text("legacy", encoding="utf-8")
+            repo = AlertRepository(
+                db_path=str(tmp_path / "alerts.db"),
+                output_csv_path=str(output_path),
+                input_csv_path=str(input_path),
+                write_compatibility_logs=False,
+            )
+
+            repo.reset_runtime_data()
+
+            self.assertFalse(output_path.exists())
+            self.assertFalse(input_path.exists())
+
+    def test_query_search_matches_service_hints_in_record_json(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            repo = AlertRepository(
+                db_path=str(tmp_path / "alerts.db"),
+                output_csv_path=str(tmp_path / "output_logs.csv"),
+                input_csv_path=str(tmp_path / "input_logs.csv"),
+            )
+
+            record = build_record(1)
+            record["ServiceHints"] = [translate_prediction_label("RDP-Patator")]
+            repo.save_alert(record)
+
+            rows, total = repo.query_alerts({"q": "RDP"}, limit=20, offset=0)
+
+            self.assertEqual(total, 1)
+            self.assertEqual(rows[0]["ServiceHints"], [translate_prediction_label("RDP-Patator")])
+
+    def test_prediction_filter_matches_service_hints(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            tmp_path = Path(tmp_dir)
+            repo = AlertRepository(
+                db_path=str(tmp_path / "alerts.db"),
+                output_csv_path=str(tmp_path / "output_logs.csv"),
+                input_csv_path=str(tmp_path / "input_logs.csv"),
+            )
+
+            record = build_record(1)
+            record["Classification"] = translate_prediction_label("DoS")
+            record["ServiceHints"] = [translate_prediction_label("RDP-Patator")]
+            repo.save_alert(record)
+
+            rows, total = repo.query_alerts({"prediction": "RDP-Patator"}, limit=20, offset=0)
+
+            self.assertEqual(total, 1)
+            self.assertEqual(rows[0]["Classification"], translate_prediction_label("DoS"))
+            self.assertEqual(rows[0]["ServiceHints"], [translate_prediction_label("RDP-Patator")])
 
 
 if __name__ == "__main__":

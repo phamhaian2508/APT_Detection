@@ -115,6 +115,27 @@ class AppRuntime:
             self.capture_thread = self.socketio.start_background_task(self.capture.sniff_forever, self.thread_stop_event)
             self.logger.info("Capture thread started.")
 
+    def reset_runtime_data(self, clear_csv_logs: bool = True) -> None:
+        self.repository.reset_runtime_data(clear_csv_logs=clear_csv_logs)
+        with self.thread_lock:
+            self.capture.current_flows.clear()
+            self.capture._last_live_update.clear()
+
+        while True:
+            try:
+                features = self.flow_queue.get_nowait()
+            except Empty:
+                break
+            else:
+                self.flow_queue.task_done()
+
+        with self.metrics_lock:
+            self.dropped_flows = 0
+            self.worker_errors = 0
+            self.processed_flows = 0
+            self.started_at = time.time()
+            self.source_counts = Counter()
+
     def _run_flow_worker(self) -> None:
         while not self.thread_stop_event.is_set() or not self.flow_queue.empty():
             try:
@@ -233,6 +254,7 @@ def create_app() -> tuple[Flask, SocketIO]:
 
     @app.route("/")
     def index():
+        runtime.reset_runtime_data(clear_csv_logs=True)
         runtime.start_capture()
         return render_template(
             "index.html",

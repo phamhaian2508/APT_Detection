@@ -88,8 +88,13 @@ class AlertRepository:
                 connection.commit()
 
         if clear_csv_logs:
-            self.output_csv_path.write_text("", encoding="utf-8-sig")
-            self.input_csv_path.write_text("", encoding="utf-8-sig")
+            if self.write_compatibility_logs:
+                self.output_csv_path.write_text("", encoding="utf-8-sig")
+                self.input_csv_path.write_text("", encoding="utf-8-sig")
+            else:
+                for path in (self.output_csv_path, self.input_csv_path):
+                    if path.exists():
+                        path.unlink()
 
     def save_alert(self, record: Dict[str, Any]) -> Dict[str, Any]:
         base_record = dict(record)
@@ -249,6 +254,7 @@ class AlertRepository:
                 "pname LIKE ?",
                 "classification LIKE ?",
                 "risk LIKE ?",
+                "record_json LIKE ?",
                 "CAST(src_port AS TEXT) LIKE ?",
                 "CAST(dest_port AS TEXT) LIKE ?",
                 "CAST(pid AS TEXT) LIKE ?",
@@ -265,8 +271,15 @@ class AlertRepository:
         prediction_value = (filters.get("prediction") or "").strip()
         if prediction_value:
             prediction_values = prediction_filter_values(prediction_value)
-            conditions.append("classification IN (" + ", ".join(["?"] * len(prediction_values)) + ")")
-            params.extend(prediction_values)
+            prediction_conditions = ["classification IN (" + ", ".join(["?"] * len(prediction_values)) + ")"]
+            prediction_params: List[Any] = list(prediction_values)
+
+            hint_conditions = ["record_json LIKE ?" for _ in prediction_values]
+            prediction_conditions.append("(" + " OR ".join(hint_conditions) + ")")
+            prediction_params.extend([f"%{value}%" for value in prediction_values])
+
+            conditions.append("(" + " OR ".join(prediction_conditions) + ")")
+            params.extend(prediction_params)
 
         protocol_value = (filters.get("protocol") or "").strip()
         if protocol_value:

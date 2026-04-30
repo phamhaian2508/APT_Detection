@@ -363,7 +363,7 @@ $(document).ready(function () {
         row += "<td>" + pidLabel + "</td>";
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + displayValue(flow.prediction, "-") + "</span>";
         if (hintSummary) {
-            row += '<span class="cell-secondary">Dáº¥u hiá»‡u: ' + hintSummary + "</span>";
+            row += '<span class="cell-secondary">Hint: ' + hintSummary + "</span>";
         }
         row += "</td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";
@@ -400,7 +400,7 @@ $(document).ready(function () {
         row += "<td>" + (flow.dstDisplay || flow.dst) + "</td>";
         row += '<td><span class="prediction-pill ' + predictionClass + '">' + flow.prediction + "</span>";
         if (hintSummary) {
-            row += '<span class="cell-secondary">Dáº¥u hiá»‡u: ' + hintSummary + "</span>";
+            row += '<span class="cell-secondary">Hint: ' + hintSummary + "</span>";
         }
         row += "</td>";
         row += "<td>" + probabilityLabel(flow.probability) + "</td>";

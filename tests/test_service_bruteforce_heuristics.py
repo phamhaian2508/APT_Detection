@@ -96,7 +96,7 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
         self.assertIsNotNone(matches[3])
         self.assertEqual(matches[3].classification, translate_prediction_label("RDP-Patator"))
 
-    def test_non_benign_model_predictions_block_service_bruteforce(self):
+    def test_non_benign_model_predictions_do_not_block_service_hints(self):
         detector = build_rdp_bruteforce_heuristic()
         prediction = translate_prediction_label("DoS")
 
@@ -113,7 +113,8 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
                 )
             )
 
-        self.assertEqual(matches, [None, None, None, None])
+        self.assertIsNotNone(matches[3])
+        self.assertEqual(matches[3].classification, translate_prediction_label("RDP-Patator"))
 
     def test_long_lived_sessions_are_not_treated_as_bruteforce(self):
         prediction = translate_prediction_label("Benign")
