@@ -230,6 +230,20 @@ $(document).ready(function () {
         };
     }
 
+    function predictionMatchesFilter(flow, selectedPrediction) {
+        if (!selectedPrediction) {
+            return true;
+        }
+
+        if (flow.prediction === selectedPrediction) {
+            return true;
+        }
+
+        return (flow.serviceHints || []).some(function (hint) {
+            return hint === selectedPrediction;
+        });
+    }
+
     function flowMatchesFilters(flow) {
         var filters = currentFilters();
         var normalizedQuery = normalizeText(filters.q);
@@ -258,7 +272,7 @@ $(document).ready(function () {
         if (filters.risk && flow.risk !== filters.risk) {
             return false;
         }
-        if (filters.prediction && flow.prediction !== filters.prediction) {
+        if (!predictionMatchesFilter(flow, filters.prediction)) {
             return false;
         }
         if (filters.protocol && normalizeText(flow.protocol) !== normalizeText(filters.protocol)) {
