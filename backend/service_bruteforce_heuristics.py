@@ -49,13 +49,6 @@ class ServiceBruteForceHeuristic:
         self._recent_attempts: Dict[Tuple[str, str, int], Deque[float]] = {}
 
     def evaluate(self, record: Dict[str, object], current_prediction: str) -> ServiceHeuristicMatch | None:
-        normalized_prediction = translate_prediction_label(current_prediction)
-        if normalized_prediction not in {
-            translate_prediction_label("Benign"),
-            translate_prediction_label("Probe"),
-        }:
-            return None
-
         candidate = self._candidate_key(record)
         if candidate is None:
             return None
