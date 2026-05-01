@@ -120,6 +120,7 @@ DISPLAY_LABELS = {
 }
 
 PREDICTION_LABELS = {
+    "Database-Patator": "T\u1ea5n c\u00f4ng d\u00f2 qu\u00e9t database",
     "Benign": "Lưu lượng hợp lệ",
     "Botnet": "Lưu lượng botnet",
     "DDoS": "Tấn công DDoS",
@@ -138,9 +139,9 @@ PREDICTION_LABELS = {
 
 # Visible alert categories in the dashboard filter.
 DEMO_FILTER_PREDICTION_KEYS = [
+    "Database-Patator",
     "Benign",
     "DDoS",
-    "DNS-Abuse",
     "DoS",
     "FTP-Patator",
     "LDAP-Patator",
@@ -153,6 +154,9 @@ DEMO_FILTER_PREDICTION_KEYS = [
 ]
 
 PREDICTION_ALIASES = {
+    "Tan cong do quet database": "T\u1ea5n c\u00f4ng d\u00f2 qu\u00e9t database",
+    "TÃ¡ÂºÂ¥n cÃƒÂ´ng dÃƒÂ² quÃƒÂ©t database": "T\u1ea5n c\u00f4ng d\u00f2 qu\u00e9t database",
+    "Do database": "T\u1ea5n c\u00f4ng d\u00f2 qu\u00e9t database",
     "Luu luong hop le": "Lưu lượng hợp lệ",
     "LÆ°u lÆ°á»£ng há»£p lá»‡": "Lưu lượng hợp lệ",
     "Luu luong botnet": "Lưu lượng botnet",
@@ -280,13 +284,10 @@ def is_priority_alert(prediction_label: str, risk_label: str) -> bool:
     normalized_prediction = translate_prediction_label(prediction_label)
     benign_prediction = translate_prediction_label("Benign")
     ddos_prediction = translate_prediction_label("DDoS")
-    dns_abuse_prediction = translate_prediction_label("DNS-Abuse")
     dos_prediction = translate_prediction_label("DoS")
     if normalized_prediction == dos_prediction:
         return False
     if normalized_prediction == ddos_prediction:
-        return risk_rank(risk_label) >= risk_rank("High")
-    if normalized_prediction == dns_abuse_prediction:
         return risk_rank(risk_label) >= risk_rank("High")
     if normalized_prediction != benign_prediction:
         return True
@@ -297,7 +298,6 @@ def clamp_attack_risk(prediction_label: str, risk_label: str) -> str:
     normalized_prediction = translate_prediction_label(prediction_label)
     normalized_risk = translate_risk_label(risk_label)
     ddos_prediction = translate_prediction_label("DDoS")
-    dns_abuse_prediction = translate_prediction_label("DNS-Abuse")
     dos_prediction = translate_prediction_label("DoS")
 
     if normalized_prediction == ddos_prediction:
@@ -308,18 +308,7 @@ def clamp_attack_risk(prediction_label: str, risk_label: str) -> str:
         return normalized_risk
 
     if normalized_prediction == dos_prediction:
-        if risk_rank(normalized_risk) > risk_rank("Medium"):
-            return translate_risk_label("Medium")
-        if risk_rank(normalized_risk) < risk_rank("Low"):
-            return translate_risk_label("Low")
-        return normalized_risk
-
-    if normalized_prediction == dns_abuse_prediction:
-        if risk_rank(normalized_risk) > risk_rank("High"):
-            return translate_risk_label("High")
-        if risk_rank(normalized_risk) < risk_rank("Low"):
-            return translate_risk_label("Low")
-        return normalized_risk
+        return translate_risk_label("Medium")
 
     return normalized_risk
 
@@ -327,7 +316,6 @@ def clamp_attack_risk(prediction_label: str, risk_label: str) -> str:
 def clamp_attack_probability(prediction_label: str, probability: Any) -> float:
     normalized_prediction = translate_prediction_label(prediction_label)
     ddos_prediction = translate_prediction_label("DDoS")
-    dns_abuse_prediction = translate_prediction_label("DNS-Abuse")
     dos_prediction = translate_prediction_label("DoS")
 
     try:
@@ -341,8 +329,6 @@ def clamp_attack_probability(prediction_label: str, probability: Any) -> float:
         return min(normalized_probability, 0.962)
     if normalized_prediction == ddos_prediction:
         return min(normalized_probability, 0.987)
-    if normalized_prediction == dns_abuse_prediction:
-        return min(normalized_probability, 0.978)
     return min(normalized_probability, 0.9999)
 
 

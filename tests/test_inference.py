@@ -6,7 +6,7 @@ from backend.features import translate_prediction_label, translate_risk_label
 
 
 class InferenceServiceTests(unittest.TestCase):
-    def test_unconfirmed_model_dos_prediction_is_downgraded(self):
+    def test_unconfirmed_model_dos_prediction_is_preserved(self):
         record = {
             "Classification": translate_prediction_label("DoS"),
             "Probability": 0.91,
@@ -19,26 +19,39 @@ class InferenceServiceTests(unittest.TestCase):
             flood_heuristic_match=None,
         )
 
-        self.assertEqual(record["Classification"], translate_prediction_label("Benign"))
-        self.assertEqual(record["Risk"], translate_risk_label("Low"))
-        self.assertLessEqual(record["Probability"], 0.49)
+        self.assertEqual(record["Classification"], translate_prediction_label("DoS"))
+        self.assertEqual(record["Risk"], translate_risk_label("Medium"))
+        self.assertEqual(record["Probability"], 0.91)
 
-    def test_confirmed_model_dos_prediction_is_preserved(self):
+    def test_unconfirmed_model_ddos_prediction_is_downgraded(self):
         record = {
-            "Classification": translate_prediction_label("DoS"),
+            "Classification": translate_prediction_label("DDoS"),
             "Probability": 0.91,
-            "Risk": translate_risk_label("Medium"),
+            "Risk": translate_risk_label("High"),
         }
 
         InferenceService._suppress_unconfirmed_flood_prediction(
             record,
-            model_prediction=translate_prediction_label("DoS"),
-            flood_heuristic_match=object(),
+            model_prediction=translate_prediction_label("DDoS"),
+            flood_heuristic_match=None,
         )
 
-        self.assertEqual(record["Classification"], translate_prediction_label("DoS"))
-        self.assertEqual(record["Risk"], translate_risk_label("Medium"))
-        self.assertEqual(record["Probability"], 0.91)
+        self.assertEqual(record["Classification"], translate_prediction_label("Benign"))
+        self.assertEqual(record["Risk"], translate_risk_label("Low"))
+        self.assertLessEqual(record["Probability"], 0.49)
+
+    def test_disabled_dns_abuse_prediction_is_downgraded(self):
+        record = {
+            "Classification": translate_prediction_label("DNS-Abuse"),
+            "Probability": 0.91,
+            "Risk": translate_risk_label("High"),
+        }
+
+        InferenceService._suppress_disabled_prediction(record)
+
+        self.assertEqual(record["Classification"], translate_prediction_label("Benign"))
+        self.assertEqual(record["Risk"], translate_risk_label("Low"))
+        self.assertLessEqual(record["Probability"], 0.49)
 
     def test_build_stream_payload_normalizes_historical_dos_risk_probability_and_priority(self):
         service = InferenceService.__new__(InferenceService)
@@ -67,7 +80,7 @@ class InferenceServiceTests(unittest.TestCase):
         self.assertEqual(payload["probability"], 0.962)
         self.assertFalse(payload["isPriority"])
 
-    def test_build_stream_payload_normalizes_historical_dns_abuse_probability(self):
+    def test_build_stream_payload_suppresses_historical_dns_abuse(self):
         service = InferenceService.__new__(InferenceService)
         service.geo_resolver = SimpleNamespace(decorate_ip=lambda address: address)
         record = {
@@ -89,9 +102,10 @@ class InferenceServiceTests(unittest.TestCase):
 
         payload = service.build_stream_payload(record)
 
-        self.assertEqual(payload["prediction"], translate_prediction_label("DNS-Abuse"))
-        self.assertEqual(payload["probability"], 0.978)
-        self.assertTrue(payload["isPriority"])
+        self.assertEqual(payload["prediction"], translate_prediction_label("Benign"))
+        self.assertEqual(payload["risk"], translate_risk_label("Low"))
+        self.assertEqual(payload["probability"], 0.49)
+        self.assertFalse(payload["isPriority"])
 
 
 if __name__ == "__main__":

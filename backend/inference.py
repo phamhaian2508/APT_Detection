@@ -34,10 +34,11 @@ from backend.features import (
     translate_prediction_label,
     translate_risk_label,
 )
-from backend.dns_heuristics import DNSAbuseHeuristic
 from backend.flood_heuristics import FloodAttackHeuristic
 from backend.ftp_heuristics import FTPBruteForceHeuristic
 from backend.service_bruteforce_heuristics import (
+    build_mysql_bruteforce_heuristic,
+    build_postgresql_bruteforce_heuristic,
     build_ldap_bruteforce_heuristic,
     build_rdp_bruteforce_heuristic,
     build_smb_bruteforce_heuristic,
@@ -117,12 +118,13 @@ class InferenceService:
         self.logger = logger or logging.getLogger("apt_detection.inference")
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
         self.ftp_heuristic = FTPBruteForceHeuristic()
-        self.dns_heuristic = DNSAbuseHeuristic()
         self.flood_heuristic = FloodAttackHeuristic()
         self.ssh_heuristic = SSHBruteForceHeuristic()
         self.service_bruteforce_heuristics = []
         if enable_service_bruteforce_heuristics:
             self.service_bruteforce_heuristics = [
+                build_mysql_bruteforce_heuristic(),
+                build_postgresql_bruteforce_heuristic(),
                 build_ldap_bruteforce_heuristic(),
                 build_rdp_bruteforce_heuristic(),
                 build_smb_bruteforce_heuristic(),
@@ -195,17 +197,6 @@ class InferenceService:
             record["Risk"] = heuristic_match.risk
             self._append_service_hint(record, heuristic_match.classification)
 
-        dns_heuristic_match = self._evaluate_heuristic(
-            self.dns_heuristic,
-            record,
-            str(record["Classification"]),
-            preview=preview,
-        )
-        if dns_heuristic_match is not None:
-            record["Classification"] = dns_heuristic_match.classification
-            record["Probability"] = dns_heuristic_match.probability
-            record["Risk"] = dns_heuristic_match.risk
-
         flood_heuristic_match = self._evaluate_heuristic(
             self.flood_heuristic,
             record,
@@ -222,6 +213,7 @@ class InferenceService:
             model_prediction=model_prediction,
             flood_heuristic_match=flood_heuristic_match,
         )
+        self._suppress_disabled_prediction(record)
 
         record["Risk"] = clamp_attack_risk(str(record["Classification"]), str(record["Risk"]))
         record["Probability"] = clamp_attack_probability(str(record["Classification"]), record.get("Probability"))
@@ -243,17 +235,15 @@ class InferenceService:
         flood_heuristic_match: Any,
     ) -> None:
         benign_prediction = translate_prediction_label("Benign")
-        dos_prediction = translate_prediction_label("DoS")
         ddos_prediction = translate_prediction_label("DDoS")
-        flood_predictions = {dos_prediction, ddos_prediction}
         normalized_model_prediction = translate_prediction_label(model_prediction)
         normalized_record_prediction = translate_prediction_label(str(record.get("Classification") or benign_prediction))
 
         if flood_heuristic_match is not None:
             return
-        if normalized_model_prediction not in flood_predictions:
+        if normalized_model_prediction != ddos_prediction:
             return
-        if normalized_record_prediction not in flood_predictions:
+        if normalized_record_prediction != ddos_prediction:
             return
 
         record["Classification"] = benign_prediction
@@ -267,35 +257,50 @@ class InferenceService:
         if normalized_hint not in service_hints:
             service_hints.append(normalized_hint)
 
+    @staticmethod
+    def _suppress_disabled_prediction(record: Dict[str, Any]) -> None:
+        benign_prediction = translate_prediction_label("Benign")
+        disabled_prediction = translate_prediction_label("DNS-Abuse")
+        normalized_prediction = translate_prediction_label(str(record.get("Classification") or benign_prediction))
+
+        if normalized_prediction != disabled_prediction:
+            return
+
+        record["Classification"] = benign_prediction
+        record["Risk"] = translate_risk_label("Low")
+        record["Probability"] = min(float(record.get("Probability") or 0.0), 0.49)
+
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        prediction = translate_prediction_label(record["Classification"])
-        risk = clamp_attack_risk(prediction, str(record["Risk"]))
-        probability = clamp_attack_probability(prediction, record.get("Probability"))
-        service_hints = [translate_prediction_label(hint) for hint in list(record.get("ServiceHints") or []) if hint]
+        display_record = dict(record)
+        self._suppress_disabled_prediction(display_record)
+        prediction = translate_prediction_label(display_record["Classification"])
+        risk = clamp_attack_risk(prediction, str(display_record["Risk"]))
+        probability = clamp_attack_probability(prediction, display_record.get("Probability"))
+        service_hints = [translate_prediction_label(hint) for hint in list(display_record.get("ServiceHints") or []) if hint]
         benign_prediction = translate_prediction_label("Benign")
         ddos_prediction = translate_prediction_label("DDoS")
         dos_prediction = translate_prediction_label("DoS")
         flow_key = "{src}-{dst}-{src_port}-{dst_port}-{protocol}".format(
-            src=record["Src"],
-            dst=record["Dest"],
-            src_port=record["SrcPort"],
-            dst_port=record["DestPort"],
-            protocol=record["Protocol"],
+            src=display_record["Src"],
+            dst=display_record["Dest"],
+            src_port=display_record["SrcPort"],
+            dst_port=display_record["DestPort"],
+            protocol=display_record["Protocol"],
         )
         return {
-            "id": record["FlowID"],
+            "id": display_record["FlowID"],
             "flowKey": flow_key,
-            "src": record["Src"],
-            "srcDisplay": self.geo_resolver.decorate_ip(record["Src"]),
-            "srcPort": record["SrcPort"],
-            "dst": record["Dest"],
-            "dstDisplay": self.geo_resolver.decorate_ip(record["Dest"]),
-            "dstPort": record["DestPort"],
-            "protocol": record["Protocol"],
-            "start": record["FlowStartTime"],
-            "lastSeen": record["FlowLastSeen"],
-            "appName": record["PName"],
-            "pid": record["PID"],
+            "src": display_record["Src"],
+            "srcDisplay": self.geo_resolver.decorate_ip(display_record["Src"]),
+            "srcPort": display_record["SrcPort"],
+            "dst": display_record["Dest"],
+            "dstDisplay": self.geo_resolver.decorate_ip(display_record["Dest"]),
+            "dstPort": display_record["DestPort"],
+            "protocol": display_record["Protocol"],
+            "start": display_record["FlowStartTime"],
+            "lastSeen": display_record["FlowLastSeen"],
+            "appName": display_record["PName"],
+            "pid": display_record["PID"],
             "prediction": prediction,
             "serviceHints": service_hints,
             "probability": probability,
@@ -308,9 +313,11 @@ class InferenceService:
 
     def build_detail_context(self, record: Dict[str, Any]) -> Dict[str, Any]:
         feature_vector = feature_vector_from_record(record)
-        normalized_prediction = translate_prediction_label(str(record.get("Classification") or "Benign"))
-        normalized_risk = clamp_attack_risk(normalized_prediction, str(record.get("Risk") or "Minimal"))
-        normalized_probability = clamp_attack_probability(normalized_prediction, record.get("Probability"))
+        display_record = dict(record)
+        self._suppress_disabled_prediction(display_record)
+        normalized_prediction = translate_prediction_label(str(display_record.get("Classification") or "Benign"))
+        normalized_risk = clamp_attack_risk(normalized_prediction, str(display_record.get("Risk") or "Minimal"))
+        normalized_probability = clamp_attack_probability(normalized_prediction, display_record.get("Probability"))
         risk_html = build_risk_summary_html(normalized_risk)
 
         exp_html = None
@@ -343,7 +350,6 @@ class InferenceService:
             output_type="div",
         )
 
-        display_record = dict(record)
         display_record["Classification"] = normalized_prediction
         display_record["Risk"] = normalized_risk
         display_record["Probability"] = normalized_probability
