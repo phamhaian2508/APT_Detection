@@ -171,6 +171,18 @@ def build_smb_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     )
 
 
+def build_ldap_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
+    return ServiceBruteForceHeuristic(
+        label="LDAP-Patator",
+        service_ports=(389, 636, 3268, 3269),
+        max_flow_duration_us=16_000_000,
+        max_packet_rate_threshold=34.0,
+        max_bwd_payload_bytes=240,
+        max_packet_len_bytes=300,
+        base_probability=0.65,
+    )
+
+
 def build_telnet_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="Telnet-Patator",

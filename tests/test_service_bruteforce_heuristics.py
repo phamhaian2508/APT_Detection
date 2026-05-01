@@ -2,6 +2,7 @@ import unittest
 
 from backend.features import translate_prediction_label
 from backend.service_bruteforce_heuristics import (
+    build_ldap_bruteforce_heuristic,
     build_rdp_bruteforce_heuristic,
     build_smb_bruteforce_heuristic,
     build_smtp_bruteforce_heuristic,
@@ -36,6 +37,7 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
     def test_repeated_attempts_are_promoted_for_all_supported_services(self):
         prediction = translate_prediction_label("Benign")
         profiles = [
+            ("LDAP-Patator", build_ldap_bruteforce_heuristic(), 389, 0.65),
             ("RDP-Patator", build_rdp_bruteforce_heuristic(), 3389, 0.66),
             ("SMB-Patator", build_smb_bruteforce_heuristic(), 445, 0.64),
             ("Telnet-Patator", build_telnet_bruteforce_heuristic(), 23, 0.63),
@@ -65,6 +67,7 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
     def test_non_service_traffic_does_not_trigger(self):
         prediction = translate_prediction_label("Benign")
         detectors = [
+            build_ldap_bruteforce_heuristic(),
             build_rdp_bruteforce_heuristic(),
             build_smb_bruteforce_heuristic(),
             build_telnet_bruteforce_heuristic(),
@@ -119,6 +122,7 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
     def test_long_lived_sessions_are_not_treated_as_bruteforce(self):
         prediction = translate_prediction_label("Benign")
         profiles = [
+            (build_ldap_bruteforce_heuristic(), 389),
             (build_rdp_bruteforce_heuristic(), 3389),
             (build_smb_bruteforce_heuristic(), 445),
             (build_telnet_bruteforce_heuristic(), 23),
@@ -178,6 +182,30 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
         self.assertEqual(matches[:3], [None, None, None])
         self.assertIsNotNone(matches[3])
         self.assertEqual(matches[3].classification, translate_prediction_label("RDP-Patator"))
+
+    def test_ldaps_port_is_treated_as_ldap_service(self):
+        detector = build_ldap_bruteforce_heuristic()
+        prediction = translate_prediction_label("Benign")
+
+        matches = []
+        for second in range(4):
+            matches.append(
+                detector.evaluate(
+                    build_record(
+                        DestPort=636,
+                        MaxPacketLen=220,
+                        BwdPacketLenMean=84,
+                        AvgBwdSegmentSize=84,
+                        FlowStartTime=f"2026-05-01 11:20:0{second}",
+                        FlowLastSeen=f"2026-05-01 11:20:0{second + 1}",
+                    ),
+                    prediction,
+                )
+            )
+
+        self.assertEqual(matches[:3], [None, None, None])
+        self.assertIsNotNone(matches[3])
+        self.assertEqual(matches[3].classification, translate_prediction_label("LDAP-Patator"))
 
 
 if __name__ == "__main__":
