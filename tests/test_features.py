@@ -40,6 +40,12 @@ class FeatureHelpersTests(unittest.TestCase):
         self.assertEqual(risk_rank(clamped), risk_rank("High"))
         self.assertEqual(clamped, translate_risk_label("High"))
 
+    def test_dos_risk_is_clamped_to_medium_when_it_would_otherwise_be_high(self):
+        clamped = clamp_attack_risk(translate_prediction_label("DoS"), "High")
+
+        self.assertEqual(risk_rank(clamped), risk_rank("Medium"))
+        self.assertEqual(clamped, translate_risk_label("Medium"))
+
     def test_alert_records_initialize_service_hints_and_keep_them_in_ordered_output(self):
         record = build_alert_record([0.0] * 48, translate_prediction_label("Benign"), 0.12, translate_risk_label("Low"))
         self.assertEqual(record["ServiceHints"], [])

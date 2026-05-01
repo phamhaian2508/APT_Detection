@@ -116,11 +116,12 @@ class FloodAttackHeuristic:
         )
 
         if self._is_ddos(event_count, unique_sources, target_score, source_event_share, source_score_share, packet_rate, flow_score):
-            score = min(
-                self.base_ddos_probability
-                + max(0.0, (target_score - self.ddos_score_threshold)) * self.probability_step
-                + max(0.0, (unique_sources - self.ddos_unique_sources_threshold)) * (self.probability_step / 2),
-                0.99,
+            score = self._ddos_probability(
+                event_count=event_count,
+                unique_sources=unique_sources,
+                target_score=target_score,
+                packet_rate=packet_rate,
+                flow_score=flow_score,
             )
             return FloodHeuristicMatch(
                 classification=translate_prediction_label("DDoS"),
@@ -160,6 +161,8 @@ class FloodAttackHeuristic:
             )
             if target_pressure_risk is not None and risk_rank(target_pressure_risk) > risk_rank(risk):
                 risk = target_pressure_risk
+            if risk_rank(risk) > risk_rank("Medium"):
+                risk = "Medium"
             return FloodHeuristicMatch(
                 classification=translate_prediction_label("DoS"),
                 probability=score,
@@ -335,6 +338,50 @@ class FloodAttackHeuristic:
             return True
         return False
 
+    def _ddos_probability(
+        self,
+        event_count: int,
+        unique_sources: int,
+        target_score: float,
+        packet_rate: float,
+        flow_score: float,
+    ) -> float:
+        event_bonus = self._normalize(
+            event_count,
+            lower=self.ddos_event_threshold,
+            upper=self.ddos_event_threshold + 10,
+        )
+        source_bonus = self._normalize(
+            unique_sources,
+            lower=self.ddos_unique_sources_threshold,
+            upper=self.ddos_unique_sources_threshold + 8,
+        )
+        score_bonus = self._normalize(
+            target_score,
+            lower=self.ddos_score_threshold,
+            upper=self.ddos_score_threshold + 36.0,
+        )
+        rate_bonus = self._normalize(
+            packet_rate,
+            lower=self.high_packet_rate_threshold,
+            upper=max(self.very_high_packet_rate_threshold * 2.0, self.high_packet_rate_threshold + 1.0),
+        )
+        spike_bonus = self._normalize(
+            flow_score,
+            lower=self.single_flow_dos_score_threshold,
+            upper=self.single_flow_dos_score_threshold + 3.0,
+        )
+
+        probability = (
+            0.82
+            + (event_bonus * 0.06)
+            + (source_bonus * 0.05)
+            + (score_bonus * 0.07)
+            + (rate_bonus * 0.03)
+            + (spike_bonus * 0.02)
+        )
+        return min(probability, 0.987)
+
     def _dos_probability(
         self,
         source_target_count: int,
@@ -346,25 +393,33 @@ class FloodAttackHeuristic:
     ) -> float:
         average_target_score = source_target_score / max(source_target_count, 1)
         dominance = max(source_event_share, source_score_share)
-        normalized_score = self._normalize(average_target_score, lower=5.5, upper=8.0)
-        repetition = self._normalize(source_target_count, lower=self.dos_high_rate_event_threshold, upper=self.dos_event_threshold + 5)
+        normalized_score = self._normalize(average_target_score, lower=6.2, upper=8.8)
+        repetition = self._normalize(
+            source_target_count,
+            lower=self.dos_high_rate_event_threshold,
+            upper=self.dos_event_threshold + 12,
+        )
         dominance_bonus = self._normalize(dominance, lower=self.dos_source_dominance_threshold, upper=1.0)
         rate_bonus = self._normalize(
             packet_rate,
             lower=self.high_packet_rate_threshold,
-            upper=max(self.high_packet_rate_threshold + 1.0, self.dos_extreme_single_flow_packet_rate_threshold),
+            upper=max(self.dos_extreme_single_flow_packet_rate_threshold * 1.4, self.high_packet_rate_threshold + 1.0),
         )
-        spike_bonus = self._normalize(flow_score, lower=self.single_flow_dos_score_threshold, upper=self.single_flow_dos_score_threshold + 1.5)
+        spike_bonus = self._normalize(
+            flow_score,
+            lower=self.single_flow_dos_score_threshold,
+            upper=self.single_flow_dos_score_threshold + 2.2,
+        )
 
         probability = (
-            0.68
-            + (normalized_score * 0.12)
-            + (repetition * 0.08)
-            + (dominance_bonus * 0.08)
-            + (rate_bonus * 0.08)
-            + (spike_bonus * 0.04)
+            0.66
+            + (normalized_score * 0.10)
+            + (repetition * 0.09)
+            + (dominance_bonus * 0.05)
+            + (rate_bonus * 0.06)
+            + (spike_bonus * 0.03)
         )
-        return min(probability, 0.97)
+        return min(probability, 0.962)
 
     def _dos_risk_label(
         self,
@@ -376,24 +431,6 @@ class FloodAttackHeuristic:
         flow_score: float,
     ) -> str:
         average_target_score = source_target_score / max(source_target_count, 1)
-        dominance = max(source_event_share, source_score_share)
-        if (
-            (
-                packet_rate >= (self.dos_extreme_single_flow_packet_rate_threshold * 1.5)
-                and flow_score >= (self.single_flow_dos_score_threshold + 0.6)
-            )
-            or (
-                source_target_count >= (self.dos_event_threshold + 5)
-                and average_target_score >= 7.5
-                and dominance >= 0.92
-            )
-            or (
-                source_target_count >= (self.dos_event_threshold + 7)
-                and average_target_score >= 7.2
-                and packet_rate >= (self.very_high_packet_rate_threshold * 1.6)
-            )
-        ):
-            return "High"
         if (
             packet_rate >= self.dos_extreme_single_flow_packet_rate_threshold
             or average_target_score >= 7.0
