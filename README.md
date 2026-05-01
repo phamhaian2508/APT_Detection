@@ -40,6 +40,7 @@ Web app address: [http://localhost:5000](http://localhost:5000)
 The dashboard filter currently shows these categories:
 
 * `Lưu lượng hợp lệ`
+* `Tấn công dò quét database`
 * `Tấn công DDoS`
 * `Tấn công DoS`
 * `Tấn công dò quét FTP`

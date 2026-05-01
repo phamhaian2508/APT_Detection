@@ -3,6 +3,8 @@ import unittest
 from backend.features import translate_prediction_label
 from backend.service_bruteforce_heuristics import (
     build_ldap_bruteforce_heuristic,
+    build_mysql_bruteforce_heuristic,
+    build_postgresql_bruteforce_heuristic,
     build_rdp_bruteforce_heuristic,
     build_smb_bruteforce_heuristic,
     build_smtp_bruteforce_heuristic,
@@ -37,6 +39,8 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
     def test_repeated_attempts_are_promoted_for_all_supported_services(self):
         prediction = translate_prediction_label("Benign")
         profiles = [
+            ("Database-Patator", build_mysql_bruteforce_heuristic(), 3306, 0.65),
+            ("Database-Patator", build_postgresql_bruteforce_heuristic(), 5432, 0.65),
             ("LDAP-Patator", build_ldap_bruteforce_heuristic(), 389, 0.65),
             ("RDP-Patator", build_rdp_bruteforce_heuristic(), 3389, 0.66),
             ("SMB-Patator", build_smb_bruteforce_heuristic(), 445, 0.64),
@@ -67,6 +71,8 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
     def test_non_service_traffic_does_not_trigger(self):
         prediction = translate_prediction_label("Benign")
         detectors = [
+            build_mysql_bruteforce_heuristic(),
+            build_postgresql_bruteforce_heuristic(),
             build_ldap_bruteforce_heuristic(),
             build_rdp_bruteforce_heuristic(),
             build_smb_bruteforce_heuristic(),
@@ -122,6 +128,8 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
     def test_long_lived_sessions_are_not_treated_as_bruteforce(self):
         prediction = translate_prediction_label("Benign")
         profiles = [
+            (build_mysql_bruteforce_heuristic(), 3306),
+            (build_postgresql_bruteforce_heuristic(), 5432),
             (build_ldap_bruteforce_heuristic(), 389),
             (build_rdp_bruteforce_heuristic(), 3389),
             (build_smb_bruteforce_heuristic(), 445),
@@ -206,6 +214,54 @@ class ServiceBruteForceHeuristicTests(unittest.TestCase):
         self.assertEqual(matches[:3], [None, None, None])
         self.assertIsNotNone(matches[3])
         self.assertEqual(matches[3].classification, translate_prediction_label("LDAP-Patator"))
+
+    def test_mysql_port_is_treated_as_database_service(self):
+        detector = build_mysql_bruteforce_heuristic()
+        prediction = translate_prediction_label("Benign")
+
+        matches = []
+        for second in range(4):
+            matches.append(
+                detector.evaluate(
+                    build_record(
+                        DestPort=3306,
+                        MaxPacketLen=240,
+                        BwdPacketLenMean=96,
+                        AvgBwdSegmentSize=96,
+                        FlowStartTime=f"2026-05-01 11:30:0{second}",
+                        FlowLastSeen=f"2026-05-01 11:30:0{second + 1}",
+                    ),
+                    prediction,
+                )
+            )
+
+        self.assertEqual(matches[:3], [None, None, None])
+        self.assertIsNotNone(matches[3])
+        self.assertEqual(matches[3].classification, translate_prediction_label("Database-Patator"))
+
+    def test_postgresql_port_is_treated_as_database_service(self):
+        detector = build_postgresql_bruteforce_heuristic()
+        prediction = translate_prediction_label("Benign")
+
+        matches = []
+        for second in range(4):
+            matches.append(
+                detector.evaluate(
+                    build_record(
+                        DestPort=5432,
+                        MaxPacketLen=260,
+                        BwdPacketLenMean=104,
+                        AvgBwdSegmentSize=104,
+                        FlowStartTime=f"2026-05-01 11:40:0{second}",
+                        FlowLastSeen=f"2026-05-01 11:40:0{second + 1}",
+                    ),
+                    prediction,
+                )
+            )
+
+        self.assertEqual(matches[:3], [None, None, None])
+        self.assertIsNotNone(matches[3])
+        self.assertEqual(matches[3].classification, translate_prediction_label("Database-Patator"))
 
 
 if __name__ == "__main__":

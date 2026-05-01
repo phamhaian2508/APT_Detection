@@ -183,6 +183,30 @@ def build_ldap_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     )
 
 
+def build_mysql_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
+    return ServiceBruteForceHeuristic(
+        label="Database-Patator",
+        service_ports=(3306,),
+        max_flow_duration_us=16_000_000,
+        max_packet_rate_threshold=34.0,
+        max_bwd_payload_bytes=300,
+        max_packet_len_bytes=360,
+        base_probability=0.65,
+    )
+
+
+def build_postgresql_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
+    return ServiceBruteForceHeuristic(
+        label="Database-Patator",
+        service_ports=(5432,),
+        max_flow_duration_us=16_000_000,
+        max_packet_rate_threshold=34.0,
+        max_bwd_payload_bytes=320,
+        max_packet_len_bytes=360,
+        base_probability=0.65,
+    )
+
+
 def build_telnet_bruteforce_heuristic() -> ServiceBruteForceHeuristic:
     return ServiceBruteForceHeuristic(
         label="Telnet-Patator",
