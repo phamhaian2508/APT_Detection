@@ -298,8 +298,8 @@ def clamp_attack_risk(prediction_label: str, risk_label: str) -> str:
         return normalized_risk
 
     if normalized_prediction == dos_prediction:
-        if risk_rank(normalized_risk) > risk_rank("High"):
-            return translate_risk_label("High")
+        if risk_rank(normalized_risk) > risk_rank("Medium"):
+            return translate_risk_label("Medium")
         if risk_rank(normalized_risk) < risk_rank("Low"):
             return translate_risk_label("Low")
         return normalized_risk

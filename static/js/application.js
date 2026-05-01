@@ -167,39 +167,39 @@ $(document).ready(function () {
         if (flow.flowKey) {
             return "flow:" + flow.flowKey;
         }
-        return "id:" + String(flow.id || "");
-    }
-
-    function persistedDisplayId(flow) {
-        var parsedId = Number(flow.id);
-        if (flow.isProvisional || Number.isNaN(parsedId) || parsedId <= 0) {
-            return null;
+        if (flow.id !== null && flow.id !== undefined && flow.id !== "") {
+            return "id:" + String(flow.id);
         }
-        return parsedId;
+        return [
+            "fallback",
+            flow.src || "",
+            flow.dst || "",
+            flow.srcPort || "",
+            flow.dstPort || "",
+            flow.protocol || "",
+            flow.start || "",
+            flow.lastSeen || "",
+            flow.prediction || ""
+        ].join(":");
     }
 
     function assignDisplayId(flow) {
-        var persistedId = persistedDisplayId(flow);
         var displayKey = displayKeyForFlow(flow);
-
-        if (persistedId !== null) {
-            flow.displayId = persistedId;
-            displayIdByKey["id:" + String(flow.id)] = persistedId;
-            if (flow.flowKey) {
-                displayIdByKey["flow:" + flow.flowKey] = persistedId;
-            }
-            if (persistedId >= nextDisplayId) {
-                nextDisplayId = persistedId + 1;
-            }
-            return flow;
-        }
 
         if (displayIdByKey[displayKey]) {
             flow.displayId = displayIdByKey[displayKey];
             return flow;
         }
 
-        flow.displayId = null;
+        flow.displayId = nextDisplayId;
+        displayIdByKey[displayKey] = nextDisplayId;
+        if (flow.id !== null && flow.id !== undefined && flow.id !== "") {
+            displayIdByKey["id:" + String(flow.id)] = nextDisplayId;
+        }
+        if (flow.flowKey) {
+            displayIdByKey["flow:" + flow.flowKey] = nextDisplayId;
+        }
+        nextDisplayId += 1;
         return flow;
     }
 
@@ -341,8 +341,25 @@ $(document).ready(function () {
         return entries.slice(0, maxItems);
     }
 
+    function compareByDisplayIdDesc(left, right) {
+        var leftDisplayId = Number(left.displayId);
+        var rightDisplayId = Number(right.displayId);
+
+        if (!Number.isNaN(leftDisplayId) && !Number.isNaN(rightDisplayId) && leftDisplayId !== rightDisplayId) {
+            return rightDisplayId - leftDisplayId;
+        }
+
+        var leftId = Number(left.id);
+        var rightId = Number(right.id);
+        if (!Number.isNaN(leftId) && !Number.isNaN(rightId) && leftId !== rightId) {
+            return rightId - leftId;
+        }
+
+        return normalizeText(String(right.lastSeen || "")).localeCompare(normalizeText(String(left.lastSeen || "")));
+    }
+
     function visibleFlows() {
-        var flows = recentFlows.slice();
+        var flows = recentFlows.slice().sort(compareByDisplayIdDesc);
         if (priorityOnly) {
             flows = flows.filter(isPriorityFlow);
         }
@@ -634,11 +651,13 @@ $(document).ready(function () {
 
         $.getJSON(url)
             .done(function (response) {
+                var items = (response.items || []).map(normalizeFlow);
                 displayIdByKey = {};
                 nextDisplayId = 1;
-                recentFlows = (response.items || []).map(function (item) {
-                    return assignDisplayId(normalizeFlow(item));
-                });
+                for (var index = items.length - 1; index >= 0; index -= 1) {
+                    items[index] = assignDisplayId(items[index]);
+                }
+                recentFlows = items;
                 rebuildPriorityFlows();
                 bufferedCount = 0;
                 refreshDashboard();
