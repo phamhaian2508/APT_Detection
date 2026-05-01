@@ -3,6 +3,7 @@ import unittest
 from backend.features import (
     build_alert_record,
     build_risk_summary_html,
+    clamp_attack_probability,
     clamp_attack_risk,
     is_priority_alert,
     ordered_record,
@@ -19,10 +20,10 @@ class FeatureHelpersTests(unittest.TestCase):
         self.assertIn("Cao", html)
         self.assertIn("risk-high", html)
 
-    def test_dos_alerts_become_priority_only_when_risk_is_high(self):
+    def test_dos_alerts_never_become_priority(self):
         self.assertFalse(is_priority_alert(translate_prediction_label("DoS"), "Low"))
         self.assertFalse(is_priority_alert(translate_prediction_label("DoS"), "Medium"))
-        self.assertTrue(is_priority_alert(translate_prediction_label("DoS"), "High"))
+        self.assertFalse(is_priority_alert(translate_prediction_label("DoS"), "High"))
 
     def test_ddos_alerts_become_priority_only_when_risk_is_high(self):
         self.assertFalse(is_priority_alert(translate_prediction_label("DDoS"), "Medium"))
@@ -45,6 +46,12 @@ class FeatureHelpersTests(unittest.TestCase):
 
         self.assertEqual(risk_rank(clamped), risk_rank("Medium"))
         self.assertEqual(clamped, translate_risk_label("Medium"))
+
+    def test_dos_probability_is_capped_below_ninety_nine_percent(self):
+        clamped = clamp_attack_probability(translate_prediction_label("DoS"), 0.9999)
+
+        self.assertLess(clamped, 0.99)
+        self.assertEqual(clamped, 0.962)
 
     def test_alert_records_initialize_service_hints_and_keep_them_in_ordered_output(self):
         record = build_alert_record([0.0] * 48, translate_prediction_label("Benign"), 0.12, translate_risk_label("Low"))
