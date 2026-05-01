@@ -34,9 +34,11 @@ from backend.features import (
     translate_prediction_label,
     translate_risk_label,
 )
+from backend.dns_heuristics import DNSAbuseHeuristic
 from backend.flood_heuristics import FloodAttackHeuristic
 from backend.ftp_heuristics import FTPBruteForceHeuristic
 from backend.service_bruteforce_heuristics import (
+    build_ldap_bruteforce_heuristic,
     build_rdp_bruteforce_heuristic,
     build_smb_bruteforce_heuristic,
     build_smtp_bruteforce_heuristic,
@@ -115,11 +117,13 @@ class InferenceService:
         self.logger = logger or logging.getLogger("apt_detection.inference")
         self.geo_resolver = GeoResolver(enabled=enable_geolocation, logger=self.logger.getChild("geo"))
         self.ftp_heuristic = FTPBruteForceHeuristic()
+        self.dns_heuristic = DNSAbuseHeuristic()
         self.flood_heuristic = FloodAttackHeuristic()
         self.ssh_heuristic = SSHBruteForceHeuristic()
         self.service_bruteforce_heuristics = []
         if enable_service_bruteforce_heuristics:
             self.service_bruteforce_heuristics = [
+                build_ldap_bruteforce_heuristic(),
                 build_rdp_bruteforce_heuristic(),
                 build_smb_bruteforce_heuristic(),
                 build_telnet_bruteforce_heuristic(),
@@ -190,6 +194,17 @@ class InferenceService:
             record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
             record["Risk"] = heuristic_match.risk
             self._append_service_hint(record, heuristic_match.classification)
+
+        dns_heuristic_match = self._evaluate_heuristic(
+            self.dns_heuristic,
+            record,
+            str(record["Classification"]),
+            preview=preview,
+        )
+        if dns_heuristic_match is not None:
+            record["Classification"] = dns_heuristic_match.classification
+            record["Probability"] = dns_heuristic_match.probability
+            record["Risk"] = dns_heuristic_match.risk
 
         flood_heuristic_match = self._evaluate_heuristic(
             self.flood_heuristic,

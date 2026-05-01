@@ -403,3 +403,29 @@
 2026-05-01 16:25:07 | INFO | apt_detection.runtime.capture | Capture loop started.
 2026-05-01 16:25:07 | INFO | apt_detection.runtime | Capture thread started.
 2026-05-01 16:25:12 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:39:27 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 16:39:27 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 16:39:28 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 16:39:28 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 16:39:28 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 16:39:30 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:40:16 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 16:41:06 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:46:51 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 16:46:51 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 16:46:51 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:46:51 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 16:46:51 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 16:46:51 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 16:46:55 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:47:36 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 16:47:41 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 16:47:41 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:56:07 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 16:56:07 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 16:56:09 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 16:56:09 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 16:56:09 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 16:56:09 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:56:12 | INFO | apt_detection | Socket client connected.
+2026-05-01 16:56:54 | INFO | apt_detection | Socket client disconnected.

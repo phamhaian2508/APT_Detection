@@ -29,6 +29,10 @@ class FeatureHelpersTests(unittest.TestCase):
         self.assertFalse(is_priority_alert(translate_prediction_label("DDoS"), "Medium"))
         self.assertTrue(is_priority_alert(translate_prediction_label("DDoS"), "High"))
 
+    def test_dns_abuse_alerts_become_priority_only_when_risk_is_high(self):
+        self.assertFalse(is_priority_alert(translate_prediction_label("DNS-Abuse"), "Medium"))
+        self.assertTrue(is_priority_alert(translate_prediction_label("DNS-Abuse"), "High"))
+
     def test_ddos_risk_is_clamped_to_medium_when_it_would_otherwise_be_low(self):
         clamped = clamp_attack_risk(translate_prediction_label("DDoS"), "Low")
 
@@ -52,6 +56,12 @@ class FeatureHelpersTests(unittest.TestCase):
 
         self.assertLess(clamped, 0.99)
         self.assertEqual(clamped, 0.962)
+
+    def test_dns_abuse_probability_is_capped_below_ninety_nine_percent(self):
+        clamped = clamp_attack_probability(translate_prediction_label("DNS-Abuse"), 0.9999)
+
+        self.assertLess(clamped, 0.99)
+        self.assertEqual(clamped, 0.978)
 
     def test_alert_records_initialize_service_hints_and_keep_them_in_ordered_output(self):
         record = build_alert_record([0.0] * 48, translate_prediction_label("Benign"), 0.12, translate_risk_label("Low"))

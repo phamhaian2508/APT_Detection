@@ -67,6 +67,32 @@ class InferenceServiceTests(unittest.TestCase):
         self.assertEqual(payload["probability"], 0.962)
         self.assertFalse(payload["isPriority"])
 
+    def test_build_stream_payload_normalizes_historical_dns_abuse_probability(self):
+        service = InferenceService.__new__(InferenceService)
+        service.geo_resolver = SimpleNamespace(decorate_ip=lambda address: address)
+        record = {
+            "FlowID": 8,
+            "Src": "192.168.186.8",
+            "SrcPort": 53111,
+            "Dest": "116.97.90.124",
+            "DestPort": 53,
+            "Protocol": "UDP",
+            "FlowStartTime": "2026-05-01 09:05:00",
+            "FlowLastSeen": "2026-05-01 09:05:01",
+            "PName": "chrome.exe",
+            "PID": 4567,
+            "Classification": translate_prediction_label("DNS-Abuse"),
+            "Probability": 0.9999,
+            "Risk": translate_risk_label("High"),
+            "ServiceHints": [],
+        }
+
+        payload = service.build_stream_payload(record)
+
+        self.assertEqual(payload["prediction"], translate_prediction_label("DNS-Abuse"))
+        self.assertEqual(payload["probability"], 0.978)
+        self.assertTrue(payload["isPriority"])
+
 
 if __name__ == "__main__":
     unittest.main()
