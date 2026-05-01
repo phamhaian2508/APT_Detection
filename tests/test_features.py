@@ -60,7 +60,7 @@ class FeatureHelpersTests(unittest.TestCase):
         self.assertEqual(clamped, 0.962)
 
     def test_alert_records_initialize_service_hints_and_keep_them_in_ordered_output(self):
-        record = build_alert_record([0.0] * 48, translate_prediction_label("Benign"), 0.12, translate_risk_label("Low"))
+        record = build_alert_record([0.0] * 49, translate_prediction_label("Benign"), 0.12, translate_risk_label("Low"))
         self.assertEqual(record["ServiceHints"], [])
 
         record["FlowID"] = 1

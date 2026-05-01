@@ -22,6 +22,7 @@ class FakePacket:
         win_bytes=1024,
         pid=100,
         process_name="app.exe",
+        target_is_local=False,
     ):
         self.timestamp = timestamp
         self.payload_bytes = payload_bytes
@@ -39,6 +40,7 @@ class FakePacket:
         self.win_bytes = win_bytes
         self.pid = pid
         self.process_name = process_name
+        self.target_is_local = target_is_local
 
     def getDestPort(self):
         return self.dest_port
@@ -87,6 +89,9 @@ class FakePacket:
 
     def getTimestamp(self):
         return self.timestamp
+
+    def getTargetIsLocal(self):
+        return self.target_is_local
 
 
 class FlowTests(unittest.TestCase):

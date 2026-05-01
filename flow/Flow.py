@@ -86,6 +86,7 @@ class Flow:
         self.flowFeatures.setDest(packet.getDest())
         self.flowFeatures.setSrcPort(packet.getSrcPort())
         self.flowFeatures.setProtocol(packet.getProtocol())
+        self.flowFeatures.setTargetIsLocal(packet.getTargetIsLocal())
 
 
         self.flowLastSeen = packet.getTimestamp()
@@ -182,6 +183,8 @@ class Flow:
         self.packet_size_stats.add(packetInfo.getPacketSize())
         self.flow_iat_stats.add((packetInfo.getTimestamp() - self.flowLastSeen) * 1000 * 1000)
         self.flowLastSeen = packetInfo.getTimestamp()
+        if packetInfo.getTargetIsLocal():
+            self.flowFeatures.setTargetIsLocal(True)
 
     def terminated(self):
         duration = (self.flowLastSeen - self.flowStartTime) * 1000 * 1000
@@ -290,4 +293,5 @@ class Flow:
                 
                 self.flowFeatures.getPName(),
                 self.flowFeatures.getPID(),
+                self.flowFeatures.getTargetIsLocal(),
                 ]

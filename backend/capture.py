@@ -16,22 +16,31 @@ class ProcessResolver:
     def __init__(self, refresh_interval: float = 2.0, logger: logging.Logger | None = None) -> None:
         self.refresh_interval = refresh_interval
         self._last_refresh = 0.0
-        self._port_index: Dict[int, Tuple[Optional[int], str]] = {}
+        self._port_index: Dict[int, Tuple[Optional[int], str, str]] = {}
         self._pid_name_cache: Dict[int, str] = {}
         self.logger = logger or logging.getLogger("apt_detection.capture.process")
 
-    def resolve(self, src_port: int, dest_port: int) -> Tuple[Optional[int], str]:
+    def resolve(self, src_ip: str, src_port: int, dest_ip: str, dest_port: int) -> Tuple[Optional[int], str, bool]:
         now = time.monotonic()
         if now - self._last_refresh >= self.refresh_interval:
             self._refresh_snapshot(now)
 
+        dest_binding = self._port_index.get(dest_port)
+        if dest_binding is not None and self._address_matches(dest_binding[2], dest_ip):
+            return dest_binding[0], dest_binding[1], True
+
+        src_binding = self._port_index.get(src_port)
+        if src_binding is not None and self._address_matches(src_binding[2], src_ip):
+            return src_binding[0], src_binding[1], False
+
         for port in (src_port, dest_port):
-            if port in self._port_index:
-                return self._port_index[port]
-        return None, ""
+            binding = self._port_index.get(port)
+            if binding is not None:
+                return binding[0], binding[1], False
+        return None, "", False
 
     def _refresh_snapshot(self, now: float) -> None:
-        port_index: Dict[int, Tuple[Optional[int], str]] = {}
+        port_index: Dict[int, Tuple[Optional[int], str, str]] = {}
         try:
             for connection in psutil.net_connections(kind="inet"):
                 local_address = getattr(connection, "laddr", None)
@@ -39,12 +48,13 @@ class ProcessResolver:
                     continue
 
                 port = getattr(local_address, "port", None)
+                ip_address = getattr(local_address, "ip", "")
                 pid = getattr(connection, "pid", None)
                 if port is None or port in port_index:
                     continue
 
                 process_name = self._process_name(pid)
-                port_index[int(port)] = (pid, process_name)
+                port_index[int(port)] = (pid, process_name, str(ip_address or ""))
         except (psutil.Error, OSError):
             self.logger.debug("Could not refresh process snapshot.", exc_info=True)
             return
@@ -65,6 +75,13 @@ class ProcessResolver:
             name = ""
         self._pid_name_cache[pid] = name
         return name
+
+    @staticmethod
+    def _address_matches(bound_ip: str, packet_ip: str) -> bool:
+        normalized_bound_ip = str(bound_ip or "").strip()
+        if normalized_bound_ip in {"", "0.0.0.0", "::", "*"}:
+            return True
+        return normalized_bound_ip == str(packet_ip or "").strip()
 
 
 class CaptureService:
@@ -114,8 +131,13 @@ class CaptureService:
             return
 
         try:
-            pid, process_name = self.process_resolver.resolve(packet.getSrcPort(), packet.getDestPort())
-            packet.setProcess(pid, process_name)
+            pid, process_name, target_is_local = self.process_resolver.resolve(
+                packet.getSrc(),
+                packet.getSrcPort(),
+                packet.getDest(),
+                packet.getDestPort(),
+            )
+            packet.setProcess(pid, process_name, target_is_local)
 
             if packet.getFwdID() in self.current_flows:
                 flow = self.current_flows[packet.getFwdID()]

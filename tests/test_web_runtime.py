@@ -74,7 +74,7 @@ class _InferenceStub:
 
 class _FlowStub:
     def preview_features(self):
-        return [0.0] * 48
+        return [0.0] * 49
 
 
 class AppRuntimeTests(unittest.TestCase):

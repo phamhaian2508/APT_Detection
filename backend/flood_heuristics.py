@@ -90,19 +90,14 @@ class FloodAttackHeuristic:
 
     def evaluate(self, record: Dict[str, object], current_prediction: str) -> FloodHeuristicMatch | None:
         normalized_prediction = translate_prediction_label(current_prediction)
-        allowed_predictions = {
-            translate_prediction_label("Benign"),
-            translate_prediction_label("DoS"),
-            translate_prediction_label("DDoS"),
-        }
-        if normalized_prediction not in allowed_predictions:
+        if not self._prediction_allows_flood_override(normalized_prediction):
             return None
 
         candidate = self._candidate(record)
         if candidate is None:
             return None
 
-        target_key, source_key, source_target_key, source_ip, event_time, packet_rate, attack_family, flow_score = candidate
+        target_key, source_key, source_target_key, source_ip, event_time, packet_rate, attack_family, flow_score, target_is_local = candidate
         event = FloodEvent(timestamp=event_time, source_ip=source_ip, score=flow_score)
         event_count, unique_sources, target_score = self._register_target_event(target_key, event)
         source_event_count, source_score = self._register_source_event(source_key, event)
@@ -142,6 +137,7 @@ class FloodAttackHeuristic:
             source_score_share,
             packet_rate,
             flow_score,
+            target_is_local,
         ):
             score = self._dos_probability(
                 source_target_count=source_target_count,
@@ -178,11 +174,12 @@ class FloodAttackHeuristic:
     def _candidate(
         self,
         record: Dict[str, object],
-    ) -> Tuple[Tuple[str, str, int, str], Tuple[str, str, str, int, str], Tuple[str, str, str, int, str], str, float, float, str, float] | None:
+    ) -> Tuple[Tuple[str, str, int, str], Tuple[str, str, str, int, str], Tuple[str, str, str, int, str], str, float, float, str, float, bool] | None:
         protocol = str(record.get("Protocol") or "").upper()
         src = str(record.get("Src") or "")
         dest = str(record.get("Dest") or "")
         dest_port = self._to_int(record.get("DestPort"))
+        target_is_local = self._to_bool(record.get("TargetIsLocal"))
         duration = self._to_float(record.get("FlowDuration"))
         packet_rate = self._to_float(record.get("FwdPackets_s"))
         syn_flags = self._to_float(record.get("SYNFlagCount"))
@@ -239,7 +236,7 @@ class FloodAttackHeuristic:
         target_key = (dest, protocol, dest_port, attack_family)
         source_key = (src, dest, protocol, dest_port, attack_family)
         source_target_key = (src, dest, protocol, dest_port, attack_family)
-        return target_key, source_key, source_target_key, src, event_time, packet_rate, attack_family, flow_score
+        return target_key, source_key, source_target_key, src, event_time, packet_rate, attack_family, flow_score, target_is_local
 
     def _register_target_event(self, key: Tuple[str, str, int, str], event: FloodEvent) -> Tuple[int, int, float]:
         events = self._recent_target_events.setdefault(key, deque())
@@ -307,12 +304,20 @@ class FloodAttackHeuristic:
         source_score_share: float,
         packet_rate: float,
         flow_score: float,
+        target_is_local: bool,
     ) -> bool:
         dominance_met = (
             source_event_share >= self.dos_source_dominance_threshold
             or source_score_share >= self.dos_source_dominance_threshold
         )
         average_target_score = source_target_score / max(source_target_count, 1)
+        if (
+            target_is_local
+            and packet_rate >= self.high_packet_rate_threshold
+            and flow_score >= max(self.single_flow_dos_score_threshold - 0.5, 5.8)
+            and dominance_met
+        ):
+            return True
         if (
             packet_rate >= self.dos_extreme_single_flow_packet_rate_threshold
             and flow_score >= (self.single_flow_dos_score_threshold + 0.7)
@@ -564,6 +569,21 @@ class FloodAttackHeuristic:
         return (value - lower) / (upper - lower)
 
     @staticmethod
+    def _prediction_allows_flood_override(prediction_label: str) -> bool:
+        blocked_predictions = {
+            translate_prediction_label("Database-Patator"),
+            translate_prediction_label("DNS-Abuse"),
+            translate_prediction_label("FTP-Patator"),
+            translate_prediction_label("LDAP-Patator"),
+            translate_prediction_label("RDP-Patator"),
+            translate_prediction_label("SMB-Patator"),
+            translate_prediction_label("SSH-Patator"),
+            translate_prediction_label("SMTP-Patator"),
+            translate_prediction_label("Telnet-Patator"),
+        }
+        return prediction_label not in blocked_predictions
+
+    @staticmethod
     def _parse_timestamp(value: object) -> float | None:
         if isinstance(value, datetime):
             return value.timestamp()
@@ -587,3 +607,11 @@ class FloodAttackHeuristic:
             return int(value)
         except (TypeError, ValueError):
             return 0
+
+    @staticmethod
+    def _to_bool(value: object) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return value != 0
+        return str(value or "").strip().lower() in {"1", "true", "yes", "on"}

@@ -40,6 +40,7 @@ class PacketInfo:
 
         self.pid = None
         self.p_name = ''
+        self.target_is_local = False
 
 
     def setSrc(self, p):
@@ -70,15 +71,19 @@ class PacketInfo:
         if p.haslayer(UDP):
             self.dest_port = p.getlayer(UDP).dport
 
-    def setProcess(self, pid, process_name):
+    def setProcess(self, pid, process_name, target_is_local=False):
         self.pid = pid
         self.p_name = process_name or ''
+        self.target_is_local = bool(target_is_local)
 
     def getPID(self):
         return self.pid
 
     def getPName(self):
         return self.p_name
+
+    def getTargetIsLocal(self):
+        return self.target_is_local
 
     def getDestPort(self):
         return self.dest_port

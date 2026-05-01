@@ -56,6 +56,7 @@ FLOW_METADATA_FIELDS = [
     "FlowLastSeen",
     "PName",
     "PID",
+    "TargetIsLocal",
 ]
 
 ALERT_FIELDS = ["FlowID"] + MODEL_FEATURE_FIELDS + FLOW_METADATA_FIELDS + ["Classification", "Probability", "Risk", "ServiceHints"]
@@ -113,6 +114,7 @@ DISPLAY_LABELS = {
     "FlowLastSeen": "Lần cuối thấy",
     "PName": "Ứng dụng",
     "PID": "PID",
+    "TargetIsLocal": "Local target",
     "Classification": "Dự đoán",
     "Probability": "Xác suất",
     "Risk": "Rủi ro",

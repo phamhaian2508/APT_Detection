@@ -6,8 +6,8 @@ from backend.capture import CaptureService
 
 
 class _ResolverStub:
-    def resolve(self, src_port, dest_port):
-        return None, ""
+    def resolve(self, src_ip, src_port, dest_ip, dest_port):
+        return None, "", False
 
 
 class CaptureServiceTests(unittest.TestCase):

@@ -22,6 +22,7 @@ def build_record(**overrides):
         "Protocol": "TCP",
         "FlowStartTime": "2026-04-10 10:00:00",
         "FlowLastSeen": "2026-04-10 10:00:00",
+        "TargetIsLocal": True,
     }
     record.update(overrides)
     return record
@@ -112,6 +113,7 @@ class FloodHeuristicTests(unittest.TestCase):
                     Dest="104.18.20.10",
                     DestPort=443,
                     Protocol="TCP",
+                    TargetIsLocal=False,
                     SYNFlagCount=1,
                     ACKFlagCount=0,
                     FlowDuration=1_000_000,
@@ -312,6 +314,66 @@ class FloodHeuristicTests(unittest.TestCase):
         self.assertEqual(match.classification, translate_prediction_label("DoS"))
         self.assertEqual(risk_rank(match.risk), risk_rank("Medium"))
         self.assertGreaterEqual(match.probability, 0.80)
+
+    def test_very_high_rate_single_source_syn_pressure_is_promoted_without_needing_extreme_rate(self):
+        detector = FloodAttackHeuristic()
+        prediction = translate_prediction_label("Benign")
+
+        match = detector.evaluate(
+            build_record(
+                FlowDuration=4_000_000,
+                FwdPackets_s=360,
+                SYNFlagCount=12,
+                ACKFlagCount=0,
+                FlowStartTime="2026-04-10 10:03:10",
+                FlowLastSeen="2026-04-10 10:03:14",
+            ),
+            prediction,
+        )
+
+        self.assertIsNotNone(match)
+        self.assertEqual(match.classification, translate_prediction_label("DoS"))
+        self.assertEqual(risk_rank(match.risk), risk_rank("Medium"))
+        self.assertGreaterEqual(match.probability, 0.70)
+
+    def test_very_high_rate_single_source_syn_pressure_to_remote_host_is_not_promoted_immediately(self):
+        detector = FloodAttackHeuristic()
+        prediction = translate_prediction_label("Benign")
+
+        match = detector.evaluate(
+            build_record(
+                Dest="203.0.113.10",
+                TargetIsLocal=False,
+                FlowDuration=4_000_000,
+                FwdPackets_s=360,
+                SYNFlagCount=12,
+                ACKFlagCount=0,
+                FlowStartTime="2026-04-10 10:03:15",
+                FlowLastSeen="2026-04-10 10:03:19",
+            ),
+            prediction,
+        )
+
+        self.assertIsNone(match)
+
+    def test_probe_prediction_does_not_block_immediate_syn_flood_promotion(self):
+        detector = FloodAttackHeuristic()
+        prediction = translate_prediction_label("Probe")
+
+        match = detector.evaluate(
+            build_record(
+                FlowDuration=4_000_000,
+                FwdPackets_s=420,
+                SYNFlagCount=14,
+                ACKFlagCount=0,
+                FlowStartTime="2026-04-10 10:03:20",
+                FlowLastSeen="2026-04-10 10:03:24",
+            ),
+            prediction,
+        )
+
+        self.assertIsNotNone(match)
+        self.assertEqual(match.classification, translate_prediction_label("DoS"))
 
     def test_dos_probability_varies_with_attack_intensity(self):
         prediction = translate_prediction_label("Benign")

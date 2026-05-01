@@ -435,3 +435,112 @@
 2026-05-01 17:05:29 | INFO | apt_detection.runtime.capture | Capture loop started.
 2026-05-01 17:05:29 | INFO | apt_detection.runtime | Capture thread started.
 2026-05-01 17:05:30 | INFO | apt_detection | Socket client connected.
+2026-05-01 20:44:19 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 20:44:19 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 20:44:22 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 20:44:22 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 20:44:22 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 20:44:25 | INFO | apt_detection | Socket client connected.
+2026-05-01 20:45:02 | INFO | apt_detection | Socket client connected.
+2026-05-01 20:45:10 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 20:45:47 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 20:45:48 | INFO | apt_detection | Socket client connected.
+2026-05-01 20:47:24 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 20:47:24 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 20:47:24 | INFO | apt_detection | Socket client connected.
+2026-05-01 20:47:24 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 20:47:24 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 20:47:24 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 20:47:28 | INFO | apt_detection | Socket client connected.
+2026-05-01 20:48:09 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:01:32 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:01:32 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:01:32 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:01:32 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:01:32 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:01:32 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:01:37 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:02:18 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:06:07 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:06:09 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:08:05 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:08:05 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:08:05 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:08:05 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:08:05 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:08:05 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:08:11 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:08:50 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:09:22 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:09:22 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:09:22 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:09:22 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:09:22 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:09:22 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:09:31 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:10:07 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:16:11 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:16:31 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:19:27 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:19:27 | INFO | apt_detection | Application initialized. DB=C:\Users\AnhTuan\Desktop\APT_Detection\data\alerts.db, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:19:27 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:19:27 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:19:27 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:19:27 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:34:13 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:34:13 | INFO | apt_detection | Application initialized. storage=memory, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:34:15 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:34:15 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:34:15 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:34:16 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:34:18 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:35:01 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:35:10 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:36:27 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:37:08 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:38:13 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:38:13 | INFO | apt_detection | Application initialized. storage=memory, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:38:13 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:38:13 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:38:13 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:38:13 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:38:15 | ERROR | apt_detection.runtime.capture | Unhandled error while processing packet.
+Traceback (most recent call last):
+  File "C:\Users\AnhTuan\Desktop\APT_Detection\backend\capture.py", line 151, in process_packet
+    self._publish_live_snapshot(packet.getFwdID(), self.current_flows[packet.getFwdID()], force=True)
+  File "C:\Users\AnhTuan\Desktop\APT_Detection\backend\capture.py", line 205, in _publish_live_snapshot
+    self.on_flow_updated(flow.live_snapshot(flow_key))
+  File "C:\Users\AnhTuan\Desktop\APT_Detection\backend\web.py", line 63, in handle_live_flow_update
+    payload = self.build_live_payload(flow_key)
+  File "C:\Users\AnhTuan\Desktop\APT_Detection\backend\web.py", line 103, in build_live_payload
+    payload = self.inference.build_stream_payload(record)
+  File "C:\Users\AnhTuan\Desktop\APT_Detection\backend\inference.py", line 297, in build_stream_payload
+    "dstDisplay": self.geo_resolver.decorate_ip(display_record["Dest"]),
+  File "C:\Users\AnhTuan\Desktop\APT_Detection\backend\inference.py", line 83, in decorate_ip
+    self._schedule_lookup(address)
+  File "C:\Users\AnhTuan\Desktop\APT_Detection\backend\inference.py", line 100, in _schedule_lookup
+    self._executor.submit(self._resolve_and_store, address)
+  File "C:\Users\AnhTuan\AppData\Local\Programs\Python\Python39\lib\concurrent\futures\thread.py", line 169, in submit
+    raise RuntimeError('cannot schedule new futures after '
+RuntimeError: cannot schedule new futures after interpreter shutdown
+2026-05-01 21:38:30 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:38:30 | INFO | apt_detection | Application initialized. storage=memory, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:38:30 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:38:30 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:38:30 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:38:30 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:38:32 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:40:30 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:40:33 | INFO | apt_detection | Socket client disconnected.
+2026-05-01 21:51:33 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:51:33 | INFO | apt_detection | Application initialized. storage=memory, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:51:35 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:51:35 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:51:35 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:51:38 | INFO | apt_detection | Socket client connected.
+2026-05-01 21:58:27 | WARNING | apt_detection.inference | Could not load models/explainer; detail view will omit LIME explanation.
+2026-05-01 21:58:27 | INFO | apt_detection | Application initialized. storage=memory, queue_size=5000, reset_on_start=True, auto_start_capture=False
+2026-05-01 21:58:30 | INFO | apt_detection.runtime | Worker thread started.
+2026-05-01 21:58:30 | INFO | apt_detection.runtime.capture | Capture loop started.
+2026-05-01 21:58:30 | INFO | apt_detection.runtime | Capture thread started.
+2026-05-01 21:58:32 | INFO | apt_detection | Socket client connected.

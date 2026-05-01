@@ -24,6 +24,7 @@ def build_record(seed):
             "FlowLastSeen": f"2026-04-07 00:00:1{seed}",
             "PName": f"proc-{seed}.exe",
             "PID": 3000 + seed,
+            "TargetIsLocal": False,
             "Classification": translate_prediction_label("Benign"),
             "Probability": 0.9,
             "Risk": translate_risk_label("Minimal"),

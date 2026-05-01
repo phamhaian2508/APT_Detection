@@ -46,6 +46,7 @@ class FlowFeatures:
         "protocol",
         "pid",
         "p_name",
+        "target_is_local",
     )
 
     def __init__(self):
@@ -108,6 +109,7 @@ class FlowFeatures:
 
         self.pid = -1
         self.p_name = "Not found"
+        self.target_is_local = False
 
     def _round_to_int(self, value):
         return int(round(value))
@@ -387,3 +389,9 @@ class FlowFeatures:
 
     def getPName(self):
         return self.p_name
+
+    def setTargetIsLocal(self, value):
+        self.target_is_local = bool(value)
+
+    def getTargetIsLocal(self):
+        return self.target_is_local
