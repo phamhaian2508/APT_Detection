@@ -30,7 +30,7 @@ class FloodAttackHeuristic:
     def __init__(
         self,
         window_seconds: int = 30,
-        dos_event_threshold: int = 8,
+        dos_event_threshold: int = 12,
         ddos_event_threshold: int = 4,
         ddos_unique_sources_threshold: int = 3,
         high_packet_rate_threshold: float = 120.0,
@@ -43,9 +43,9 @@ class FloodAttackHeuristic:
         single_flow_dos_score_threshold: float = 6.5,
         dos_source_dominance_threshold: float = 0.68,
         ddos_source_dominance_max: float = 0.58,
-        dos_high_rate_event_threshold: int = 6,
-        dos_min_average_target_score: float = 6.2,
-        dos_high_rate_average_target_score: float = 7.0,
+        dos_high_rate_event_threshold: int = 10,
+        dos_min_average_target_score: float = 6.8,
+        dos_high_rate_average_target_score: float = 7.4,
         dos_extreme_single_flow_packet_rate_threshold: float = 700.0,
         target_pressure_medium_event_threshold: int = 6,
         target_pressure_high_event_threshold: int = 10,
@@ -168,21 +168,6 @@ class FloodAttackHeuristic:
                 unique_sources=unique_sources,
                 attack_family=attack_family,
                 score=max(source_score, source_target_score, flow_score),
-            )
-
-        if normalized_prediction == translate_prediction_label("DoS") and target_pressure_risk is not None:
-            return FloodHeuristicMatch(
-                classification=translate_prediction_label("DoS"),
-                probability=self._target_pressure_probability(
-                    event_count=event_count,
-                    unique_sources=unique_sources,
-                    target_score=target_score,
-                ),
-                risk=translate_risk_label(target_pressure_risk),
-                events=event_count,
-                unique_sources=unique_sources,
-                attack_family=attack_family,
-                score=target_score,
             )
 
         return None
@@ -327,7 +312,7 @@ class FloodAttackHeuristic:
         average_target_score = source_target_score / max(source_target_count, 1)
         if (
             packet_rate >= self.dos_extreme_single_flow_packet_rate_threshold
-            and flow_score >= (self.single_flow_dos_score_threshold + 0.5)
+            and flow_score >= (self.single_flow_dos_score_threshold + 0.7)
             and dominance_met
         ):
             return True
@@ -335,19 +320,17 @@ class FloodAttackHeuristic:
             source_target_count >= self.dos_event_threshold
             and average_target_score >= self.dos_min_average_target_score
             and dominance_met
+            and (
+                packet_rate >= (self.high_packet_rate_threshold * 0.75)
+                or source_target_count >= (self.dos_event_threshold + 3)
+            )
         ):
             return True
         if (
             source_target_count >= self.dos_high_rate_event_threshold
             and average_target_score >= self.dos_high_rate_average_target_score
-            and packet_rate >= self.high_packet_rate_threshold
+            and packet_rate >= self.very_high_packet_rate_threshold
             and dominance_met
-        ):
-            return True
-        if (
-            source_event_count >= (self.dos_event_threshold + 2)
-            and source_score >= (self.dos_score_threshold + 4.0)
-            and source_event_share >= 0.8
         ):
             return True
         return False
@@ -427,6 +410,7 @@ class FloodAttackHeuristic:
     ) -> str | None:
         high_pressure = (
             event_count >= self.target_pressure_high_event_threshold
+            and unique_sources >= self.target_pressure_high_unique_sources_threshold
             and target_score >= self.target_pressure_high_score_threshold
         )
         high_distribution = (
@@ -438,6 +422,7 @@ class FloodAttackHeuristic:
 
         medium_pressure = (
             event_count >= self.target_pressure_medium_event_threshold
+            and unique_sources >= self.target_pressure_medium_unique_sources_threshold
             and target_score >= self.target_pressure_medium_score_threshold
         )
         medium_distribution = (
