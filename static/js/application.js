@@ -601,7 +601,7 @@ $(document).ready(function () {
             statusText.text("Bảng chính đang được giữ nguyên để thao tác. Có " + bufferedCount + " bản cập nhật mới chờ hiển thị.");
         } else if (hasActiveFilters()) {
             pauseButton.text("Tạm dừng cập nhật bảng");
-            statusText.text("Dữ liệu lịch sử đang được đọc từ SQLite theo bộ lọc hiện tại.");
+            statusText.text("Dữ liệu runtime trong phiên hiện tại đang được lọc theo điều kiện bạn chọn.");
         } else if (priorityOnly) {
             pauseButton.text("Tạm dừng cập nhật bảng");
             statusText.text("Đang lọc riêng các bản ghi cần ưu tiên phân tích.");
@@ -663,7 +663,7 @@ $(document).ready(function () {
                 refreshDashboard();
             })
             .fail(function () {
-                $("#table-status").text("Không thể tải lịch sử alert từ database.");
+                $("#table-status").text("Không thể tải danh sách alert trong phiên hiện tại.");
             });
     }
 

@@ -26,7 +26,7 @@ COPY templates ./templates
 COPY tests ./tests
 COPY README.md .
 
-RUN mkdir -p /app/data /app/logs
+RUN mkdir -p /app/logs
 
 EXPOSE 5000
 
