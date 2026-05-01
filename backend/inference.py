@@ -155,6 +155,7 @@ class InferenceService:
         risk_probability = float(np.sum(probabilities[1:])) if len(probabilities) > 1 else 0.0
         risk_label = translate_risk_label(risk_label_from_probability(risk_probability))
         classification = translate_prediction_label(prediction)
+        model_prediction = classification
         record = build_alert_record(features, classification, probability_score, risk_label)
 
         heuristic_match = self._evaluate_heuristic(self.ssh_heuristic, record, classification, preview=preview)
@@ -189,16 +190,22 @@ class InferenceService:
             record["Risk"] = heuristic_match.risk
             self._append_service_hint(record, heuristic_match.classification)
 
-        heuristic_match = self._evaluate_heuristic(
+        flood_heuristic_match = self._evaluate_heuristic(
             self.flood_heuristic,
             record,
             str(record["Classification"]),
             preview=preview,
         )
-        if heuristic_match is not None:
-            record["Classification"] = heuristic_match.classification
-            record["Probability"] = max(float(record["Probability"]), heuristic_match.probability)
-            record["Risk"] = heuristic_match.risk
+        if flood_heuristic_match is not None:
+            record["Classification"] = flood_heuristic_match.classification
+            record["Probability"] = max(float(record["Probability"]), flood_heuristic_match.probability)
+            record["Risk"] = flood_heuristic_match.risk
+
+        self._suppress_unconfirmed_flood_prediction(
+            record,
+            model_prediction=model_prediction,
+            flood_heuristic_match=flood_heuristic_match,
+        )
 
         record["Risk"] = clamp_attack_risk(str(record["Classification"]), str(record["Risk"]))
 
@@ -211,6 +218,30 @@ class InferenceService:
     def _evaluate_heuristic(heuristic: Any, record: Dict[str, Any], current_prediction: str, preview: bool = False) -> Any:
         engine = copy.deepcopy(heuristic) if preview else heuristic
         return engine.evaluate(record, current_prediction)
+
+    @staticmethod
+    def _suppress_unconfirmed_flood_prediction(
+        record: Dict[str, Any],
+        model_prediction: str,
+        flood_heuristic_match: Any,
+    ) -> None:
+        benign_prediction = translate_prediction_label("Benign")
+        dos_prediction = translate_prediction_label("DoS")
+        ddos_prediction = translate_prediction_label("DDoS")
+        flood_predictions = {dos_prediction, ddos_prediction}
+        normalized_model_prediction = translate_prediction_label(model_prediction)
+        normalized_record_prediction = translate_prediction_label(str(record.get("Classification") or benign_prediction))
+
+        if flood_heuristic_match is not None:
+            return
+        if normalized_model_prediction not in flood_predictions:
+            return
+        if normalized_record_prediction not in flood_predictions:
+            return
+
+        record["Classification"] = benign_prediction
+        record["Risk"] = translate_risk_label("Low")
+        record["Probability"] = min(float(record.get("Probability") or 0.0), 0.49)
 
     @staticmethod
     def _append_service_hint(record: Dict[str, Any], hint_label: str) -> None:
