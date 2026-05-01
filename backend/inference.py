@@ -25,6 +25,7 @@ from backend.features import (
     DISPLAY_LABELS,
     build_risk_summary_html,
     build_alert_record,
+    clamp_attack_probability,
     clamp_attack_risk,
     feature_vector_from_record,
     is_priority_alert,
@@ -208,6 +209,7 @@ class InferenceService:
         )
 
         record["Risk"] = clamp_attack_risk(str(record["Classification"]), str(record["Risk"]))
+        record["Probability"] = clamp_attack_probability(str(record["Classification"]), record.get("Probability"))
 
         return record
 
@@ -252,8 +254,12 @@ class InferenceService:
 
     def build_stream_payload(self, record: Dict[str, Any]) -> Dict[str, Any]:
         prediction = translate_prediction_label(record["Classification"])
-        risk = translate_risk_label(record["Risk"])
+        risk = clamp_attack_risk(prediction, str(record["Risk"]))
+        probability = clamp_attack_probability(prediction, record.get("Probability"))
         service_hints = [translate_prediction_label(hint) for hint in list(record.get("ServiceHints") or []) if hint]
+        benign_prediction = translate_prediction_label("Benign")
+        ddos_prediction = translate_prediction_label("DDoS")
+        dos_prediction = translate_prediction_label("DoS")
         flow_key = "{src}-{dst}-{src_port}-{dst_port}-{protocol}".format(
             src=record["Src"],
             dst=record["Dest"],
@@ -277,15 +283,20 @@ class InferenceService:
             "pid": record["PID"],
             "prediction": prediction,
             "serviceHints": service_hints,
-            "probability": record["Probability"],
+            "probability": probability,
             "risk": risk,
-            "isPriority": is_priority_alert(prediction, risk) or bool(service_hints),
+            "isPriority": is_priority_alert(prediction, risk) or (
+                bool(service_hints) and prediction not in {benign_prediction, dos_prediction, ddos_prediction}
+            ),
             "isProvisional": False,
         }
 
     def build_detail_context(self, record: Dict[str, Any]) -> Dict[str, Any]:
         feature_vector = feature_vector_from_record(record)
-        risk_html = build_risk_summary_html(str(record.get("Risk") or "Minimal"))
+        normalized_prediction = translate_prediction_label(str(record.get("Classification") or "Benign"))
+        normalized_risk = clamp_attack_risk(normalized_prediction, str(record.get("Risk") or "Minimal"))
+        normalized_probability = clamp_attack_probability(normalized_prediction, record.get("Probability"))
+        risk_html = build_risk_summary_html(normalized_risk)
 
         exp_html = None
         if self.explainer is not None:
@@ -318,8 +329,9 @@ class InferenceService:
         )
 
         display_record = dict(record)
-        display_record["Classification"] = translate_prediction_label(display_record["Classification"])
-        display_record["Risk"] = translate_risk_label(display_record["Risk"])
+        display_record["Classification"] = normalized_prediction
+        display_record["Risk"] = normalized_risk
+        display_record["Probability"] = normalized_probability
         display_record["ServiceHints"] = ", ".join(
             translate_prediction_label(hint) for hint in list(display_record.get("ServiceHints") or []) if hint
         ) or "-"

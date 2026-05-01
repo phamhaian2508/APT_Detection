@@ -277,7 +277,9 @@ def is_priority_alert(prediction_label: str, risk_label: str) -> bool:
     benign_prediction = translate_prediction_label("Benign")
     ddos_prediction = translate_prediction_label("DDoS")
     dos_prediction = translate_prediction_label("DoS")
-    if normalized_prediction in {ddos_prediction, dos_prediction}:
+    if normalized_prediction == dos_prediction:
+        return False
+    if normalized_prediction == ddos_prediction:
         return risk_rank(risk_label) >= risk_rank("High")
     if normalized_prediction != benign_prediction:
         return True
@@ -305,6 +307,25 @@ def clamp_attack_risk(prediction_label: str, risk_label: str) -> str:
         return normalized_risk
 
     return normalized_risk
+
+
+def clamp_attack_probability(prediction_label: str, probability: Any) -> float:
+    normalized_prediction = translate_prediction_label(prediction_label)
+    ddos_prediction = translate_prediction_label("DDoS")
+    dos_prediction = translate_prediction_label("DoS")
+
+    try:
+        normalized_probability = float(probability)
+    except (TypeError, ValueError):
+        normalized_probability = 0.0
+
+    normalized_probability = max(0.0, normalized_probability)
+
+    if normalized_prediction == dos_prediction:
+        return min(normalized_probability, 0.962)
+    if normalized_prediction == ddos_prediction:
+        return min(normalized_probability, 0.987)
+    return min(normalized_probability, 0.9999)
 
 
 def prediction_filter_values(label: str) -> List[str]:
