@@ -40,7 +40,6 @@ class AppConfig:
     web_port: int
     enable_service_bruteforce_heuristics: bool
     auto_start_capture: bool
-    db_path: str
     output_csv_path: str
     input_csv_path: str
     flow_timeout: int
@@ -60,8 +59,6 @@ class AppConfig:
     def from_env(cls, project_root: Path) -> "AppConfig":
         log_dir = project_root / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
-        data_dir = project_root / "data"
-        data_dir.mkdir(parents=True, exist_ok=True)
 
         return cls(
             secret_key=os.getenv("APT_SECRET_KEY", "secret!"),
@@ -70,7 +67,6 @@ class AppConfig:
             web_port=_get_int("APT_WEB_PORT", 5000),
             enable_service_bruteforce_heuristics=_get_bool("APT_ENABLE_SERVICE_BRUTEFORCE_HEURISTICS", False),
             auto_start_capture=_get_bool("APT_AUTO_START_CAPTURE", False),
-            db_path=os.getenv("APT_DB_PATH", str(data_dir / "alerts.db")),
             output_csv_path=os.getenv("APT_OUTPUT_CSV_PATH", str(project_root / "output_logs.csv")),
             input_csv_path=os.getenv("APT_INPUT_CSV_PATH", str(project_root / "input_logs.csv")),
             flow_timeout=_get_int("APT_FLOW_TIMEOUT", 5),

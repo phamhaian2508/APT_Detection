@@ -225,7 +225,6 @@ def create_app() -> tuple[Flask, SocketIO]:
 
     socketio = SocketIO(app, async_mode=None, logger=config.socketio_logging, engineio_logger=config.socketio_logging)
     repository = AlertRepository(
-        db_path=config.db_path,
         output_csv_path=config.output_csv_path,
         input_csv_path=config.input_csv_path,
         write_compatibility_logs=config.write_compatibility_logs,
@@ -242,8 +241,7 @@ def create_app() -> tuple[Flask, SocketIO]:
     app.extensions["apt_runtime"] = runtime
     app.extensions["apt_config"] = config
     logger.info(
-        "Application initialized. DB=%s, queue_size=%s, reset_on_start=%s, auto_start_capture=%s",
-        config.db_path,
+        "Application initialized. storage=memory, queue_size=%s, reset_on_start=%s, auto_start_capture=%s",
         config.queue_size,
         config.reset_data_on_start,
         config.auto_start_capture,
